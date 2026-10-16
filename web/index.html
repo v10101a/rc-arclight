@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>arclight</title>
+<style>
+  :root { --bg:#111317; --panel:#181b21; --line:#2a2f3a; --fg:#d9dee6; --mut:#8a93a3; --acc:#6aa2ff; --warn:#ffd166; --bad:#ff8a80; --ok:#8ce99a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font: 13px/1.4 ui-monospace, Menlo, monospace; }
+  header { display:flex; gap:10px; align-items:center; padding:8px 12px; border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap; }
+  header h1 { font-size:15px; margin:0 6px 0 0; }
+  .health { display:flex; gap:14px; margin-left:auto; color:var(--mut); flex-wrap:wrap; }
+  .health b { color:var(--fg); font-weight:600; font-variant-numeric: tabular-nums; }
+  main { display:grid; grid-template-columns: 1fr 360px; min-height: calc(100vh - 44px); }
+  #plan { padding:8px 10px; min-width:0; }
+  canvas { display:block; width:100%; border:1px solid var(--line); border-radius:6px; background:#0d0f13; cursor:crosshair; touch-action:none; }
+  canvas.edit { cursor:move; }
+  aside { border-left:1px solid var(--line); background:var(--panel); padding:10px; overflow-y:auto; }
+  section { margin-bottom:16px; }
+  h2 { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin:0 0 6px; }
+  h2 .hint { text-transform:none; letter-spacing:0; }
+  button { background:#252a34; color:var(--fg); border:1px solid #39404e; border-radius:4px; padding:4px 9px; cursor:pointer; font:inherit; }
+  button:hover { background:#303747; }
+  button.on { border-color:var(--acc); color:var(--acc); }
+  button.danger { border-color:#5a2a2a; color:var(--bad); }
+  button.confirm { background:#4a1f1f; border-color:var(--bad); }
+  input[type=text], input[type=password], select { background:#0f1115; color:var(--fg); border:1px solid #2c313b; border-radius:4px; padding:4px 6px; font:inherit; }
+  .row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:4px 0; }
+  .slider { display:grid; grid-template-columns: 62px 1fr 40px 34px; gap:6px; align-items:center; margin:3px 0; }
+  .slider label { color:var(--mut); }
+  .slider input[type=range] { width:100%; accent-color:var(--acc); margin:0; }
+  .slider .v { text-align:right; color:var(--warn); font-variant-numeric: tabular-nums; }
+  .learn { font-size:10px; padding:1px 4px; color:var(--mut); border-color:#2c313b; }
+  .learn.armed { color:var(--warn); border-color:var(--warn); }
+  .learn.bound { color:var(--acc); border-color:#2c4a7a; }
+  .pads { display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; }
+  .pads button { padding:10px 4px; }
+  .pads button.full { border-color:var(--acc); }
+  .layers { font-size:12px; }
+  .layers > div { display:flex; gap:6px; align-items:center; padding:3px 0; border-bottom:1px solid #1f242d; }
+  .layers .n { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--mut); }
+  .layers .muted .n { opacity:.45; text-decoration:line-through; }
+  .layers button { padding:1px 6px; font-size:11px; }
+  .hint { color:var(--mut); font-size:11px; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:var(--warn); }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { border-left:none; border-top:1px solid var(--line); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>arclight</h1>
+  <input id="srv" type="text" size="26" title="API server">
+  <input id="tok" type="password" size="20" placeholder="token" title="API token: the Token field on debug.html">
+  <button id="connect">connect</button>
+  <span id="status" class="hint">not connected</span>
+  <div class="health">
+    <span>stream <b id="hFps">–</b> fps</span>
+    <span>write <b id="hLat">–</b> ms</span>
+    <span>queue <b id="hQ">0</b></span>
+    <span>layers <b id="hLayers">–</b></span>
+    <span>engine <b id="hEngine">none</b></span>
+  </div>
+</header>
+<main>
+  <div id="plan">
+    <div class="row">
+      <button id="selAll">all</button><button id="selBulbs">bulbs 1–55</button><button id="sel4x1">4x1 56–63</button><button id="selRelays">relays 64–115</button><button id="selNone">none</button><button id="selInv">invert</button>
+      <span class="hint" id="selInfo">0 selected</span>
+      <span style="flex:1"></span>
+      <button id="editLayout">edit layout</button><button id="exportLayout">export</button><button id="importLayout">import</button><button id="defaultLayout">default</button>
+    </div>
+    <canvas id="cv" height="520"></canvas>
+    <div class="hint">click = select · shift+click = add · drag = box select · "edit layout" then drag lights to where they really are. Dots show the live output of the whole layer stack.</div>
+  </div>
+  <aside>
+    <section>
+      <h2>Room</h2>
+      <div class="row">
+        <button id="ownRoom" title="mute every layer that isn't the engine, so the room shows your targets">own the room</button><button class="learn" data-learn="own">midi</button>
+        <button id="releaseRoom" title="unmute the layers you muted">release</button>
+        <button id="blackout" class="danger" title="own the room and write 0 to every light">blackout</button><button class="learn" data-learn="blackout">midi</button>
+        <button id="resetScene" class="danger" title="delete every layer except the engine">reset scene</button>
+      </div>
+    </section>
+    <section>
+      <h2>Colour of selection <span class="hint" id="colInfo"></span></h2>
+      <div id="colour"></div>
+      <div class="row"><button id="relayOn">relays on</button><button id="relayOff">relays off</button><span class="hint">relays are switches</span></div>
+    </section>
+    <section>
+      <h2>Look <span class="hint">runs on the Pi, modulates the colour above</span></h2>
+      <div class="row"><select id="look"></select><button class="learn" data-learn="look">midi</button><button id="applyLook">apply to selection</button><button id="lookAll">all bulbs</button></div>
+      <div id="params"></div>
+      <div class="slider"><label>fade</label><input type="range" id="fade" min="0" max="4000" step="50"><span class="v" id="fadeV"></span><button class="learn" data-learn="fade">midi</button></div>
+      <div class="slider"><label>smooth</label><input type="range" id="tau" min="0" max="2000" step="10"><span class="v" id="tauV"></span><button class="learn" data-learn="tau">midi</button></div>
+      <div class="hint" id="engineInfo">engine: none</div>
+    </section>
+    <section>
+      <h2>Presets</h2>
+      <div class="pads" id="pads"></div>
+      <div class="hint">click = recall · shift+click = save · alt+click = clear. Arm a pad's midi via shift+alt+click.</div>
+      <div class="row"><button id="exportPresets">export</button><button id="importPresets">import</button></div>
+    </section>
+    <section>
+      <h2>MIDI</h2>
+      <div class="row"><button id="midiEnable">enable midi</button><span class="hint" id="midiInfo">off</span></div>
+      <div class="hint">arm a "midi" button next to a control, then turn a knob or hit a pad. Last message: <span id="midiLast">–</span></div>
+      <div class="row"><button id="clearMidi">clear map</button></div>
+    </section>
+    <section>
+      <h2>Layers <span class="hint">highest wins; engine should be on top</span></h2>
+      <div class="layers" id="layers"></div>
+    </section>
+  </aside>
+</main>
+<input type="file" id="filePick" accept="application/json" hidden>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem("arclight." + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("arclight." + k, JSON.stringify(v)); } catch (e) {} },
+};
+const COLOUR_CHANS = ["red", "green", "blue", "cold", "warm"];
+const ENGINE_TAG = "// arclight-engine v1";
+
+// ---------- looks: envelope functions that run on the Pi, and their knobs ----------
+const LOOK_SRC = `
+function hash(n) { var x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); }
+var LOOKS = {
+  none:    function () { return 1; },
+  breathe: function (id, k, n, t, p) { return 1 - p.depth * (0.5 + 0.5 * Math.sin(2 * Math.PI * t / p.speed)); },
+  chase:   function (id, k, n, t, p) { var pos = ((t % p.speed) / p.speed) * n; var d = Math.abs(k - pos); d = Math.min(d, n - d); return p.floor + (1 - p.floor) * Math.max(0, 1 - d / p.width); },
+  wave:    function (id, k, n, t, p) { var ph = k / n - (t % p.speed) / p.speed; ph -= Math.floor(ph); return p.floor + (1 - p.floor) * Math.pow(Math.sin(ph * Math.PI), p.sharp); },
+  sparkle: function (id, k, n, t, p) { var h = hash(id * 7.13 + Math.floor(t / p.rate) * 3.7); return h < p.density ? 1 : p.floor; },
+  strobe:  function (id, k, n, t, p) { return Math.floor(t / p.period) % 2 === 0 ? 1 : 0; }
+};`;
+// name: [min, max, default, unit]
+const LOOK_PARAMS = {
+  none:    {},
+  breathe: { speed: [500, 20000, 4000, "ms"], depth: [0, 1, 0.7, ""] },
+  chase:   { speed: [300, 20000, 3000, "ms"], width: [0.5, 20, 2, "lights"], floor: [0, 1, 0.1, ""] },
+  wave:    { speed: [500, 20000, 6000, "ms"], sharp: [1, 12, 4, ""], floor: [0, 1, 0.05, ""] },
+  sparkle: { rate: [20, 2000, 150, "ms"], density: [0, 1, 0.3, ""], floor: [0, 1, 0.2, ""] },
+  strobe:  { period: [30, 1000, 90, "ms"] },
+};
+function defaultParams(name) { const o = {}; for (const k in LOOK_PARAMS[name]) o[k] = LOOK_PARAMS[name][k][2]; return o; }
+
+// ---------- state ----------
+const S = {
+  lights: {}, ids: [], frame: {}, fpsCount: 0, fps: 0, ws: null,
+  scene: [], engine: null, selection: new Set(), layout: {}, editLayout: false,
+  targets: {},                                   // id -> channels we believe the roomtone holds
+  look: LS.get("look", null) || { name: "none", params: {}, ids: [] },
+  prevLook: null, tau: LS.get("tau", 150), fade: LS.get("fade", 800),
+  presets: LS.get("presets", null) || new Array(8).fill(null),
+  midimap: LS.get("midimap", {}), learn: null, mutedByUs: LS.get("mutedByUs", []),
+  intensity: 1,
+};
+
+// ---------- api ----------
+function setStatus(msg, cls) { const el = $("status"); el.textContent = msg; el.className = "hint " + (cls || ""); }
+async function api(method, path, body) {
+  const r = await fetch($("srv").value.replace(/\/+$/, "") + path, {
+    method, headers: { Authorization: "Bearer " + $("tok").value, "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (r.status >= 400) { let m = "HTTP " + r.status; try { m = (await r.json()).error || m; } catch (e) {} throw new Error(m); }
+  return r.status === 204 ? null : r.json();
+}
+
+// ---------- write scheduler: one request in flight, targets coalesced at <= 10 Hz ----------
+const Q = { pending: {}, inflight: false, timer: null, lastLat: 0, engineDirty: false, engineTimer: null };
+function queueTargets(map) {
+  for (const id in map) {
+    Q.pending[id] = Object.assign(Q.pending[id] || {}, map[id]);
+    S.targets[id] = Object.assign(S.targets[id] || {}, map[id]);
+  }
+  scheduleFlush();
+}
+function scheduleFlush() { if (Q.timer || Q.inflight) return; Q.timer = setTimeout(flush, 100); }
+async function flush() {
+  Q.timer = null;
+  if (Q.inflight) return;
+  const body = Q.pending; Q.pending = {};
+  if (!Object.keys(body).length) { if (Q.engineDirty) uploadEngine(); updateHealth(); return; }
+  Q.inflight = true; const t = performance.now();
+  try { await api("PUT", "/v1/shader/0", { lights: body }); Q.lastLat = performance.now() - t; }
+  catch (e) { setStatus("write failed: " + e.message, "bad"); }
+  Q.inflight = false; updateHealth();
+  if (Object.keys(Q.pending).length) scheduleFlush();
+  else if (Q.engineDirty) uploadEngine();
+}
+function requestEngine() {
+  LS.set("look", S.look); LS.set("tau", S.tau); LS.set("fade", S.fade);
+  clearTimeout(Q.engineTimer);
+  Q.engineTimer = setTimeout(() => { Q.engineDirty = true; if (!Q.inflight && !Q.timer) flush(); }, 300);
+}
+
+// ---------- engine layer (generated JS that runs on the Pi) ----------
+function engineScript() {
+  const smoothIds = S.ids.filter((id) => S.lights[id].type !== "relay");
+  const old = S.prevLook || { name: "none", params: {}, ids: [] };
+  return `${ENGINE_TAG}
+// generated by arclight web/index.html -- edit the page, not this
+var TAU = ${S.tau}, FADE = ${S.fade};
+var SMOOTH_IDS = ${JSON.stringify(smoothIds)};
+var OLD = ${JSON.stringify(old)};
+var NEW = ${JSON.stringify(S.look)};
+${LOOK_SRC}
+var state = {}, lastT = 0, started = 0;
+function idx(look) { var m = {}; for (var i = 0; i < look.ids.length; i++) m[look.ids[i]] = i; return m; }
+var OLD_IDX = idx(OLD), NEW_IDX = idx(NEW);
+function env(look, map, id, t) { var k = map[id]; if (k === undefined) return 1; return LOOKS[look.name](id, k, look.ids.length, t, look.params); }
+function update(prev, curr, init) {
+  if (!started) started = curr;
+  var dt = lastT ? Math.min(200, curr - lastT) : 10; lastT = curr;
+  var a = TAU > 0 ? 1 - Math.exp(-dt / TAU) : 1;
+  var mix = FADE > 0 ? Math.min(1, (curr - started) / FADE) : 1;
+  var byId = {};
+  for (var i = 0; i < prev.lights.length; i++) byId[prev.lights[i].id] = prev.lights[i].channels;
+  var out = [];
+  for (var j = 0; j < SMOOTH_IDS.length; j++) {
+    var id = SMOOTH_IDS[j], tgt = byId[id]; if (!tgt) continue;
+    var st = state[id]; if (!st) { st = state[id] = {}; for (var c in tgt) st[c] = tgt[c]; }
+    var e = mix >= 1 ? env(NEW, NEW_IDX, id, curr) : env(OLD, OLD_IDX, id, curr) * (1 - mix) + env(NEW, NEW_IDX, id, curr) * mix;
+    var ch = {};
+    for (var c2 in tgt) { st[c2] += (tgt[c2] - st[c2]) * a; var v = Math.round(st[c2] * e); ch[c2] = v < 0 ? 0 : (v > 255 ? 255 : v); }
+    out.push({ id: id, channels: ch });
+  }
+  return { lights: out };
+}`;
+}
+function findEngine(scene) { return scene.find((d) => d.id !== 0 && (d.script || "").startsWith(ENGINE_TAG)) || null; }
+async function uploadEngine() {
+  if (Q.inflight) { Q.engineDirty = true; return; }
+  Q.engineDirty = false; Q.inflight = true; const t = performance.now();
+  try {
+    const script = engineScript();
+    if (S.engine) await api("PUT", "/v1/shader/" + S.engine.id, { script });
+    else S.engine = await api("POST", "/v1/scene/shader", { type: "js", script, position: "bottom" });
+    S.prevLook = JSON.parse(JSON.stringify(S.look));
+    Q.lastLat = performance.now() - t;
+  } catch (e) { setStatus("engine upload failed: " + e.message, "bad"); }
+  Q.inflight = false; updateHealth(); refreshScene();
+  if (Object.keys(Q.pending).length) scheduleFlush();
+}
+
+// ---------- connect ----------
+async function connect() {
+  LS.set("srv", $("srv").value); LS.set("tok", $("tok").value);
+  setStatus("connecting…");
+  try {
+    const [lights, scene, room] = await Promise.all([api("GET", "/v1/lights"), api("GET", "/v1/scene"), api("GET", "/v1/shader/0")]);
+    S.lights = {}; (lights.lights || []).forEach((l) => { S.lights[l.id] = l; });
+    S.ids = Object.keys(S.lights).map(Number).sort((a, b) => a - b);
+    S.targets = {}; const tl = (room.template && room.template.lights) || {};
+    for (const k in tl) S.targets[+k] = Object.assign({}, tl[k]);
+    S.layout = LS.get("layout", null) || defaultLayout();
+    S.scene = scene; S.engine = findEngine(scene);
+    if (S.engine) {
+      const m = (S.engine.script || "").match(/^var NEW = (.*);$/m);
+      if (m) { try { S.look = JSON.parse(m[1]); LS.set("look", S.look); } catch (e) {} }
+      S.prevLook = JSON.parse(JSON.stringify(S.look));
+      renderLook();
+    } else { S.prevLook = null; await uploadEngine(); }
+    openStream(); renderScene(); renderColour(); updateSelInfo(); draw();
+    setStatus("connected " + new Date().toLocaleTimeString(), "ok");
+  } catch (e) { setStatus(e.message, "bad"); }
+}
+function openStream() {
+  if (S.ws) { S.ws.onclose = null; S.ws.close(); }
+  const base = $("srv").value.replace(/^http/, "ws").replace(/\/+$/, "");
+  const ws = new WebSocket(base + "/v1/scene/ws?access_token=" + encodeURIComponent($("tok").value) + "&full=json");
+  S.ws = ws;
+  ws.onmessage = (ev) => {
+    let o; try { o = JSON.parse(ev.data); } catch (e) { return; }
+    (o.lights || []).forEach((l) => { S.frame[l.id] = l.channels; });
+    S.fpsCount++; needDraw = true;
+  };
+  ws.onclose = () => { $("hFps").textContent = "–"; setStatus("stream closed; reconnecting…", "warn"); setTimeout(() => { if (S.ws === ws) openStream(); }, 2000); };
+  ws.onerror = () => {};
+}
+setInterval(() => { S.fps = S.fpsCount; S.fpsCount = 0; updateHealth(); }, 1000);
+setInterval(() => { if (S.ids.length && !Q.inflight) refreshScene(); }, 4000);
+function updateHealth() {
+  $("hFps").textContent = S.ws && S.ws.readyState === 1 ? S.fps : "–";
+  $("hFps").className = S.fps < 15 && S.ws ? "warn" : "";
+  $("hLat").textContent = Q.lastLat ? Math.round(Q.lastLat) : "–";
+  $("hLat").className = Q.lastLat > 300 ? "warn" : "";
+  $("hQ").textContent = Object.keys(Q.pending).length + (Q.inflight ? 1 : 0) + (Q.engineDirty ? 1 : 0);
+  $("hLayers").textContent = S.scene.length ? S.scene.length - 1 : "–";
+  const e = S.engine && S.scene.find((d) => d.id === S.engine.id);
+  $("hEngine").textContent = e ? e.state + (e.muted ? " (muted)" : "") : "none";
+  $("hEngine").className = e && e.state === "running" && !e.muted ? "ok" : "bad";
+}
+
+// ---------- scene / layers ----------
+async function refreshScene() {
+  try { S.scene = await api("GET", "/v1/scene"); } catch (e) { return; }
+  const eng = findEngine(S.scene);
+  if (eng) S.engine = eng; else if (S.engine) { S.engine = null; }
+  renderScene(); updateHealth();
+}
+function note(d) { const s = (d.script || "").split("\n"); for (let i = 0; i < Math.min(4, s.length); i++) { const t = s[i].trim(); if (t.startsWith("//")) return t.slice(2).trim(); } return s[0] ? s[0].slice(0, 60) : ""; }
+function renderScene() {
+  const box = $("layers"); box.innerHTML = "";
+  const top = S.scene.length ? S.scene[S.scene.length - 1] : null;
+  [...S.scene].reverse().forEach((d) => {
+    const row = document.createElement("div"); if (d.muted) row.className = "muted";
+    const isEngine = S.engine && d.id === S.engine.id;
+    const label = d.id === 0 ? "roomtone (targets)" : isEngine ? "engine (ours)" : note(d);
+    row.innerHTML = `<span style="width:22px;color:var(--mut)">${d.position}</span><span class="n" title="${esc(d.script || "")}">#${d.id} ${esc(label)}</span>`;
+    if (d.id !== 0) {
+      row.appendChild(btn(d.muted ? "unmute" : "mute", async () => { await api("POST", `/v1/shader/${d.id}/muted`, { muted: !d.muted }); refreshScene(); }));
+      if (isEngine) { if (top && top.id !== d.id) row.appendChild(btn("to top", async () => { await api("POST", `/v1/shader/${d.id}/position`, { position: "bottom" }); refreshScene(); })); }
+      else row.appendChild(btn("delete", async () => { await api("DELETE", `/v1/shader/${d.id}`); refreshScene(); }));
+      if (d.state !== "running") { const s = document.createElement("span"); s.className = "bad"; s.textContent = d.state; row.appendChild(s); }
+    }
+    box.appendChild(row);
+  });
+  const e = S.engine && S.scene.find((d) => d.id === S.engine.id);
+  $("engineInfo").textContent = e ? `engine #${e.id} ${e.state}, respawns ${e.respawns}, position ${e.position}${top && top.id !== e.id ? " — NOT on top, something is covering it" : ""}` : "engine: none";
+}
+function foreignLayers() { return S.scene.filter((d) => d.id !== 0 && !(S.engine && d.id === S.engine.id)); }
+async function ownRoom() {
+  const victims = foreignLayers().filter((d) => !d.muted);
+  for (const d of victims) { try { await api("POST", `/v1/shader/${d.id}/muted`, { muted: true }); S.mutedByUs.push(d.id); } catch (e) {} }
+  LS.set("mutedByUs", S.mutedByUs); refreshScene(); setStatus(`muted ${victims.length} layer(s)`, "ok");
+}
+async function releaseRoom() {
+  const ids = [...new Set(S.mutedByUs)]; S.mutedByUs = []; LS.set("mutedByUs", []);
+  for (const id of ids) { try { await api("POST", `/v1/shader/${id}/muted`, { muted: false }); } catch (e) {} }
+  refreshScene(); setStatus(`unmuted ${ids.length} layer(s)`, "ok");
+}
+async function resetScene() {
+  const victims = foreignLayers();
+  for (const d of victims) { try { await api("DELETE", `/v1/shader/${d.id}`); } catch (e) {} }
+  S.mutedByUs = []; LS.set("mutedByUs", []); refreshScene(); setStatus(`deleted ${victims.length} layer(s)`, "ok");
+}
+function blackout() {
+  const map = {};
+  S.ids.forEach((id) => { map[id] = {}; S.lights[id].channels.forEach((c) => { map[id][c.name] = 0; }); });
+  queueTargets(map); ownRoom(); renderColour();
+}
+
+// ---------- floor plan (plain canvas) ----------
+const cv = $("cv"), ctx = cv.getContext("2d");
+let needDraw = true, drag = null;
+function resize() { const w = cv.clientWidth || 800; if (cv.width !== Math.round(w * devicePixelRatio)) { cv.width = Math.round(w * devicePixelRatio); cv.height = Math.round(520 * devicePixelRatio); } needDraw = true; }
+window.addEventListener("resize", resize);
+function defaultLayout() {
+  const L = {}, by = (t) => S.ids.filter((id) => S.lights[id].type === t);
+  const bulbs = by("br30"), fours = by("4x1"), relays = by("relay");
+  bulbs.forEach((id, i) => { L[id] = { x: 0.03 + 0.94 * i / Math.max(1, bulbs.length - 1), y: 0.16 }; });
+  fours.forEach((id, i) => { L[id] = { x: 0.2 + 0.6 * i / Math.max(1, fours.length - 1), y: 0.4 }; });
+  relays.forEach((id, i) => { L[id] = { x: 0.06 + 0.88 * (i % 13) / 12, y: 0.6 + 0.11 * Math.floor(i / 13) }; });
+  let k = 0; S.ids.forEach((id) => { if (!L[id]) L[id] = { x: 0.05 + 0.05 * k++, y: 0.95 }; });
+  return L;
+}
+function lightColor(ch) {
+  const g = (n) => ch[n] || 0;
+  let R = g("red"), G = g("green"), B = g("blue");
+  const cold = g("cold"), warm = g("warm"), br = g("brightness");
+  R += br; G += br; B += br;
+  if (cold) { R += cold; G += cold * 0.94; B += cold * 0.86; }
+  if (warm) { R += warm; G += warm * 0.72; B += warm * 0.36; }
+  return `rgb(${Math.min(255, R | 0)},${Math.min(255, G | 0)},${Math.min(255, B | 0)})`;
+}
+function pos(id) { const p = S.layout[id] || { x: 0.5, y: 0.5 }; return [p.x * cv.width, p.y * cv.height]; }
+function radius(id) { return (S.lights[id].type === "relay" ? 5 : 8) * devicePixelRatio; }
+function draw() {
+  needDraw = false;
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  const dpr = devicePixelRatio;
+  ctx.font = `${9 * dpr}px ui-monospace, Menlo, monospace`; ctx.textAlign = "center";
+  for (const id of S.ids) {
+    const [x, y] = pos(id), r = radius(id);
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = lightColor(S.frame[id] || {}); ctx.fill();
+    ctx.lineWidth = 1 * dpr; ctx.strokeStyle = "#2c313b"; ctx.stroke();
+    if (S.selection.has(id)) { ctx.beginPath(); ctx.arc(x, y, r + 3 * dpr, 0, Math.PI * 2); ctx.lineWidth = 2 * dpr; ctx.strokeStyle = "#6aa2ff"; ctx.stroke(); }
+    ctx.fillStyle = "#8a93a3"; ctx.fillText(id, x, y + r + 10 * dpr);
+  }
+  if (drag && drag.box) { ctx.strokeStyle = "#6aa2ff"; ctx.lineWidth = 1 * dpr; ctx.setLineDash([4 * dpr, 3 * dpr]); ctx.strokeRect(drag.x0, drag.y0, drag.x1 - drag.x0, drag.y1 - drag.y0); ctx.setLineDash([]); }
+}
+(function loop() { if (needDraw && S.ids.length) draw(); requestAnimationFrame(loop); })();
+function canvasXY(ev) { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) * cv.width / r.width, (ev.clientY - r.top) * cv.height / r.height]; }
+function hit(x, y) { let best = null, bd = 1e9; for (const id of S.ids) { const [px, py] = pos(id); const d = Math.hypot(px - x, py - y); if (d < radius(id) + 4 * devicePixelRatio && d < bd) { best = id; bd = d; } } return best; }
+cv.addEventListener("pointerdown", (ev) => {
+  if (!S.ids.length) return; cv.setPointerCapture(ev.pointerId);
+  const [x, y] = canvasXY(ev), id = hit(x, y);
+  if (S.editLayout && id !== null) { drag = { move: id }; return; }
+  if (id !== null) { if (!ev.shiftKey) S.selection.clear(); if (S.selection.has(id) && ev.shiftKey) S.selection.delete(id); else S.selection.add(id); drag = { clickOnly: true }; }
+  else drag = { box: true, x0: x, y0: y, x1: x, y1: y, add: ev.shiftKey };
+  updateSelInfo(); needDraw = true;
+});
+cv.addEventListener("pointermove", (ev) => {
+  if (!drag) return; const [x, y] = canvasXY(ev);
+  if (drag.move) { S.layout[drag.move] = { x: Math.min(1, Math.max(0, x / cv.width)), y: Math.min(1, Math.max(0, y / cv.height)) }; needDraw = true; }
+  else if (drag.box) { drag.x1 = x; drag.y1 = y; needDraw = true; }
+});
+cv.addEventListener("pointerup", () => {
+  if (!drag) return;
+  if (drag.move) LS.set("layout", S.layout);
+  else if (drag.box) {
+    const x0 = Math.min(drag.x0, drag.x1), x1 = Math.max(drag.x0, drag.x1), y0 = Math.min(drag.y0, drag.y1), y1 = Math.max(drag.y0, drag.y1);
+    if (!drag.add) S.selection.clear();
+    if (x1 - x0 > 3 || y1 - y0 > 3) for (const id of S.ids) { const [px, py] = pos(id); if (px >= x0 && px <= x1 && py >= y0 && py <= y1) S.selection.add(id); }
+  }
+  drag = null; updateSelInfo(); needDraw = true;
+});
+function select(pred) { S.selection = new Set(S.ids.filter(pred)); updateSelInfo(); needDraw = true; }
+$("selAll").onclick = () => select(() => true);
+$("selBulbs").onclick = () => select((id) => S.lights[id].type === "br30");
+$("sel4x1").onclick = () => select((id) => S.lights[id].type === "4x1");
+$("selRelays").onclick = () => select((id) => S.lights[id].type === "relay");
+$("selNone").onclick = () => select(() => false);
+$("selInv").onclick = () => { const old = S.selection; select((id) => !old.has(id)); };
+$("editLayout").onclick = () => { S.editLayout = !S.editLayout; $("editLayout").classList.toggle("on", S.editLayout); cv.classList.toggle("edit", S.editLayout); };
+$("defaultLayout").onclick = () => { S.layout = defaultLayout(); LS.set("layout", S.layout); needDraw = true; };
+$("exportLayout").onclick = () => download("arclight-layout.json", S.layout);
+$("importLayout").onclick = () => pickFile((o) => { S.layout = o; LS.set("layout", o); needDraw = true; });
+function updateSelInfo() {
+  const sel = [...S.selection];
+  $("selInfo").textContent = sel.length + " selected" + (sel.length ? " (" + sel.slice(0, 12).join(",") + (sel.length > 12 ? ",…" : "") + ")" : "");
+  renderColour();
+}
+
+// ---------- colour of selection -> targets (roomtone) ----------
+const colourSliders = {};
+function renderColour() {
+  const box = $("colour");
+  const sel = [...S.selection].filter((id) => S.lights[id] && S.lights[id].type !== "relay");
+  $("colInfo").textContent = sel.length ? `${sel.length} colour light(s)` : "select some bulbs";
+  if (!box.children.length) {
+    COLOUR_CHANS.concat(["intensity"]).forEach((c) => {
+      const row = document.createElement("div"); row.className = "slider";
+      const isI = c === "intensity";
+      row.innerHTML = `<label>${c}</label><input type="range" min="0" max="${isI ? 100 : 255}" value="${isI ? 100 : 0}"><span class="v">${isI ? 100 : 0}</span><button class="learn" data-learn="col:${c}">midi</button>`;
+      const inp = row.querySelector("input"), v = row.querySelector(".v");
+      colourSliders[c] = inp;
+      inp.addEventListener("input", () => { v.textContent = inp.value; if (isI) S.intensity = inp.value / 100; writeColour(); });
+      box.appendChild(row);
+    });
+    bindLearnButtons(box);
+  }
+  if (sel.length) { // seed sliders from the first selected light's target (not an input event)
+    const t = S.targets[sel[0]] || {};
+    COLOUR_CHANS.forEach((c) => { if (t[c] !== undefined) { colourSliders[c].value = Math.round(t[c] / (S.intensity || 1)); colourSliders[c].nextElementSibling.textContent = colourSliders[c].value; } });
+  }
+}
+function writeColour() {
+  const map = {};
+  for (const id of S.selection) {
+    const l = S.lights[id]; if (!l || l.type === "relay") continue;
+    const have = new Set(l.channels.map((c) => c.name)); map[id] = {};
+    COLOUR_CHANS.forEach((c) => { if (have.has(c)) map[id][c] = Math.round(colourSliders[c].value * S.intensity); });
+  }
+  if (Object.keys(map).length) queueTargets(map);
+}
+function writeRelays(on) {
+  const map = {};
+  for (const id of S.selection) if (S.lights[id] && S.lights[id].type === "relay") map[id] = { brightness: on ? 255 : 0 };
+  if (!Object.keys(map).length) { setStatus("no relays selected", "warn"); return; }
+  queueTargets(map);
+}
+$("relayOn").onclick = () => writeRelays(true);
+$("relayOff").onclick = () => writeRelays(false);
+
+// ---------- look UI ----------
+function renderLook() {
+  const sel = $("look");
+  if (!sel.children.length) Object.keys(LOOK_PARAMS).forEach((n) => { const o = document.createElement("option"); o.value = n; o.textContent = n; sel.appendChild(o); });
+  sel.value = S.look.name;
+  const box = $("params"); box.innerHTML = "";
+  for (const k in LOOK_PARAMS[S.look.name]) {
+    const [mn, mx, df, unit] = LOOK_PARAMS[S.look.name][k];
+    if (S.look.params[k] === undefined) S.look.params[k] = df;
+    const row = document.createElement("div"); row.className = "slider";
+    const step = mx - mn <= 1 ? 0.01 : (mx - mn <= 30 ? 0.1 : 1);
+    row.innerHTML = `<label>${k}</label><input type="range" min="${mn}" max="${mx}" step="${step}" value="${S.look.params[k]}"><span class="v">${S.look.params[k]}${unit}</span><button class="learn" data-learn="param:${k}">midi</button>`;
+    const inp = row.querySelector("input"), v = row.querySelector(".v");
+    inp.addEventListener("input", () => { S.look.params[k] = +inp.value; v.textContent = inp.value + unit; requestEngine(); });
+    box.appendChild(row);
+  }
+  bindLearnButtons(box);
+  $("fade").value = S.fade; $("fadeV").textContent = S.fade; $("tau").value = S.tau; $("tauV").textContent = S.tau;
+}
+$("look").onchange = () => { S.look.name = $("look").value; S.look.params = defaultParams(S.look.name); if (!S.look.ids.length) S.look.ids = S.ids.filter((id) => S.lights[id].type === "br30"); renderLook(); requestEngine(); };
+$("applyLook").onclick = () => { const ids = [...S.selection].filter((id) => S.lights[id].type !== "relay"); if (!ids.length) { setStatus("select some bulbs first", "warn"); return; } S.look.ids = ids; requestEngine(); setStatus(`look ${S.look.name} on ${ids.length} light(s)`, "ok"); };
+$("lookAll").onclick = () => { S.look.ids = S.ids.filter((id) => S.lights[id].type === "br30"); requestEngine(); };
+$("fade").addEventListener("input", () => { S.fade = +$("fade").value; $("fadeV").textContent = S.fade; requestEngine(); });
+$("tau").addEventListener("input", () => { S.tau = +$("tau").value; $("tauV").textContent = S.tau; requestEngine(); });
+
+// ---------- presets ----------
+function renderPads() {
+  const box = $("pads"); box.innerHTML = "";
+  S.presets.forEach((p, i) => {
+    const b = document.createElement("button"); b.textContent = (i + 1) + (p ? " " + (p.look.name) : " –"); if (p) b.className = "full";
+    b.title = p ? `look ${p.look.name}, saved ${p.at}` : "empty";
+    b.onclick = (ev) => { if (ev.shiftKey && ev.altKey) { arm("preset:" + i, b); return; } if (ev.altKey) { S.presets[i] = null; } else if (ev.shiftKey) savePreset(i); else recallPreset(i); LS.set("presets", S.presets); renderPads(); };
+    box.appendChild(b);
+  });
+}
+async function savePreset(i) {
+  try { const room = await api("GET", "/v1/shader/0"); S.presets[i] = { at: new Date().toLocaleString(), targets: room.template.lights, look: JSON.parse(JSON.stringify(S.look)), tau: S.tau, fade: S.fade }; LS.set("presets", S.presets); renderPads(); setStatus("saved preset " + (i + 1), "ok"); }
+  catch (e) { setStatus(e.message, "bad"); }
+}
+function recallPreset(i) {
+  const p = S.presets[i]; if (!p) return;
+  const map = {}; for (const k in p.targets) map[+k] = p.targets[k];
+  queueTargets(map);
+  S.look = JSON.parse(JSON.stringify(p.look)); S.tau = p.tau; S.fade = p.fade; renderLook(); requestEngine(); renderColour();
+  setStatus("recalled preset " + (i + 1), "ok");
+}
+$("exportPresets").onclick = () => download("arclight-presets.json", S.presets);
+$("importPresets").onclick = () => pickFile((o) => { if (Array.isArray(o)) { S.presets = o; LS.set("presets", o); renderPads(); } });
+
+// ---------- MIDI ----------
+function arm(target, btnEl) {
+  document.querySelectorAll(".learn.armed").forEach((b) => b.classList.remove("armed"));
+  if (S.learn === target) { S.learn = null; return; }
+  S.learn = target; if (btnEl) btnEl.classList.add("armed"); setStatus("move a knob or hit a pad to bind " + target, "warn");
+}
+function bindLearnButtons(root) {
+  root.querySelectorAll(".learn").forEach((b) => {
+    b.onclick = (ev) => { ev.stopPropagation(); ev.preventDefault(); arm(b.dataset.learn, b); };
+    markBound(b);
+  });
+}
+function markBound(b) {
+  const key = Object.keys(S.midimap).find((k) => S.midimap[k] === b.dataset.learn);
+  b.classList.toggle("bound", !!key); b.title = key ? "bound to " + key + " (click to rebind)" : "click, then move a MIDI control";
+  b.textContent = key ? key.split(":").slice(0, 1) + key.split(":")[2] : "midi";
+}
+async function enableMidi() {
+  if (!navigator.requestMIDIAccess) { $("midiInfo").textContent = "no Web MIDI here: use Chrome and serve from localhost"; return; }
+  try {
+    const acc = await navigator.requestMIDIAccess();
+    const hook = () => { let n = 0; acc.inputs.forEach((inp) => { inp.onmidimessage = onMidi; n++; }); $("midiInfo").textContent = n + " input(s)"; };
+    hook(); acc.onstatechange = hook; $("midiEnable").classList.add("on");
+  } catch (e) { $("midiInfo").textContent = "denied: " + e.message; }
+}
+const noteState = {};
+function onMidi(ev) {
+  const [st, d1, d2] = ev.data, type = st & 0xf0, ch = st & 0x0f;
+  let key, val, isTrigger = false;
+  if (type === 0xB0) { key = `cc:${ch}:${d1}`; val = d2 / 127; }
+  else if (type === 0x90 && d2 > 0) { key = `note:${ch}:${d1}`; val = 1; isTrigger = true; }
+  else if (type === 0x80 || (type === 0x90 && d2 === 0)) { return; }
+  else return;
+  $("midiLast").textContent = key + " " + d2;
+  if (S.learn) { S.midimap[key] = S.learn; LS.set("midimap", S.midimap); S.learn = null; document.querySelectorAll(".learn").forEach(markBound); renderPads(); setStatus("bound " + key, "ok"); return; }
+  const target = S.midimap[key]; if (!target) return;
+  if (!isTrigger) { const was = noteState[key] || 0; noteState[key] = val; isTrigger = val > 0.5 && was <= 0.5; }
+  applyControl(target, val, isTrigger);
+}
+function applyControl(target, val, trig) {
+  const [kind, name] = target.split(":");
+  const setRange = (inp, v) => { inp.value = +inp.min + (+inp.max - +inp.min) * v; inp.dispatchEvent(new Event("input")); };
+  if (kind === "col") { if (colourSliders[name]) setRange(colourSliders[name], val); }
+  else if (kind === "param") { const inp = [...$("params").querySelectorAll("input")].find((i) => i.parentNode.querySelector("label").textContent === name); if (inp) setRange(inp, val); }
+  else if (kind === "fade") setRange($("fade"), val);
+  else if (kind === "tau") setRange($("tau"), val);
+  else if (kind === "look") { const names = Object.keys(LOOK_PARAMS); const n = trig && val === 1 ? names[(names.indexOf(S.look.name) + 1) % names.length] : names[Math.min(names.length - 1, Math.floor(val * names.length))]; if (n !== S.look.name) { $("look").value = n; $("look").onchange(); } }
+  else if (kind === "preset") { if (trig) recallPreset(+name); }
+  else if (kind === "own") { if (trig) ownRoom(); }
+  else if (kind === "blackout") { if (trig) blackout(); }
+}
+$("midiEnable").onclick = enableMidi;
+$("clearMidi").onclick = () => { S.midimap = {}; LS.set("midimap", {}); document.querySelectorAll(".learn").forEach(markBound); };
+
+// ---------- room buttons (two-click confirm for destructive ones) ----------
+function twoClick(el, fn) { let armed = null; el.onclick = () => { if (armed) { clearTimeout(armed); armed = null; el.classList.remove("confirm"); fn(); } else { el.classList.add("confirm"); armed = setTimeout(() => { armed = null; el.classList.remove("confirm"); }, 3000); } }; }
+$("ownRoom").onclick = ownRoom;
+$("releaseRoom").onclick = releaseRoom;
+twoClick($("blackout"), blackout);
+twoClick($("resetScene"), resetScene);
+
+// ---------- misc ----------
+function btn(label, fn) { const b = document.createElement("button"); b.textContent = label; b.onclick = (ev) => { ev.stopPropagation(); fn().catch((e) => setStatus(e.message, "bad")); }; return b; }
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
+function download(name, obj) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" })); a.download = name; a.click(); }
+function pickFile(cb) { const f = $("filePick"); f.onchange = () => { const r = new FileReader(); r.onload = () => { try { cb(JSON.parse(r.result)); } catch (e) { setStatus("bad json", "bad"); } }; r.readAsText(f.files[0]); f.value = ""; }; f.click(); }
+
+// ---------- init ----------
+(function init() {
+  const q = new URLSearchParams(location.search);
+  $("srv").value = q.get("server") || LS.get("srv", null) || "http://arclight.local:8080";
+  $("tok").value = q.get("token") || LS.get("tok", "");
+  $("connect").onclick = connect;
+  resize(); renderLook(); renderPads(); renderColour();
+  bindLearnButtons(document.querySelector("aside"));
+  if ($("tok").value) connect();
+})();
+</script>
+</body>
+</html>

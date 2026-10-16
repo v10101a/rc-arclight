@@ -9,7 +9,7 @@ I'm not changing it; everything here talks to its HTTP API on port 8080.
 - `docs/lights.json` — snapshot of the fixture inventory (`GET /v1/lights`), 2026-10-15.
 - `tools/arclamp.py` — stdlib-only CLI: inspect the scene, reset it, set the roomtone, mute layers.
 - `tools/stream.py` — print the live output stream (needs `uv`).
-- `web/` — (next) the interface itself, p5 + plain `fetch`.
+- `web/index.html` — the controller: floor plan, colour targets, looks with knobs, presets, Web MIDI. No build step, no dependencies.
 
 ## Quick start
 
@@ -26,6 +26,22 @@ uv run tools/stream.py 1 30 64            # watch three lights live
 The tools need the API token: copy it from the Token field on the debug page into `.env` at the
 repo root as `ARCLAMP_TOKEN=...` (gitignored), or export `ARCLAMP_TOKEN`. `ARCLAMP_SERVER`
 overrides the default `http://arclight.local:8080`.
+
+## The controller
+
+```sh
+python3 -m http.server 8787 --bind 127.0.0.1 --directory web
+open http://127.0.0.1:8787/
+```
+
+Paste the token once (it's remembered in the browser). Serve it from `localhost` like this rather
+than from the Pi: Chrome only gives a page Web MIDI in a secure context, and `localhost` counts.
+
+How it drives the lights, in one breath: colour controls write **targets** into the roomtone
+(fast, ~85 ms); one generated **engine layer** on the Pi eases every light toward its target and
+multiplies in a **look** (breathe, chase, wave, sparkle, strobe) with a crossfade when the look
+changes; "own the room" mutes everyone else's layers so the targets are what you see. Design and
+reasons in `docs/controller-design.md`.
 
 ## The one-paragraph model
 
