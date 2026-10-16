@@ -44,7 +44,8 @@
   .layers .muted .n { opacity:.45; text-decoration:line-through; }
   .layers button { padding:1px 6px; font-size:11px; }
   .hint { color:var(--mut); font-size:11px; }
-  .learn, .midi-only, .others, #relayRow { display:none; }
+  .learn, .midi-only, .others, #relayRow, .edit-only { display:none; }
+  body.editing .edit-only { display:inline; }
   body.midi-on .learn { display:inline-block; } body.midi-on .midi-only { display:block; }
   body.show-others .others { display:inline-block; } body.relays-selected #relayRow { display:flex; }
   details.fold summary { cursor:pointer; list-style:none; } details.fold summary::-webkit-details-marker { display:none; }
@@ -76,6 +77,7 @@
       <span class="hint" id="selInfo"></span>
       <span style="flex:1"></span>
       <button id="showOthers" title="also plot the 4x1s and relays">56–115</button>
+      <span id="editTools" class="edit-only"><button id="alignY" title="put the selected dots on one row">align ─</button><button id="alignX" title="put the selected dots in one column">align │</button><button id="spreadX" title="space the selected dots evenly left to right">spread ↔</button><button id="spreadY" title="space the selected dots evenly top to bottom">spread ↕</button><button id="tidy" title="snap dots that are nearly on the same row or column onto it (all plotted dots, or the selection)">tidy</button><button id="layoutUndoBtn" title="undo the last layout operation">undo</button></span>
       <button id="editLayout">edit layout</button>
       <button id="layoutMore" title="export / import / default layout">⋯</button>
       <span id="layoutMenu" hidden><button id="exportLayout">export</button><button id="importLayout">import</button><button id="defaultLayout">default</button></span>
@@ -106,7 +108,7 @@
     </section>
     <section>
       <h2>look</h2>
-      <div class="row"><select id="look"></select><button class="learn" data-learn="look">midi</button><button id="applyLook" title="run the look on the selected lights">to selection</button><button id="lookAll">all bulbs</button></div>
+      <div class="row"><select id="look"></select><select id="order" title="direction of chase / wave, from the mapped positions"></select><button class="learn" data-learn="look">midi</button><button id="applyLook" title="run the look on the selected lights">to selection</button><button id="lookAll">all bulbs</button></div>
       <div id="params"></div>
       <details class="fold"><summary class="hint">timing</summary>
         <div class="slider"><label>fade</label><input type="range" id="fade" min="0" max="4000" step="50"><span class="v" id="fadeV"></span><button class="learn" data-learn="fade">midi</button></div>
@@ -145,8 +147,8 @@ function hash(n) { var x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.f
 var LOOKS = {
   none:    function () { return 1; },
   breathe: function (id, k, n, t, p) { return 1 - p.depth * (0.5 + 0.5 * Math.sin(2 * Math.PI * t / p.speed)); },
-  chase:   function (id, k, n, t, p) { var pos = ((t % p.speed) / p.speed) * n; var d = Math.abs(k - pos); d = Math.min(d, n - d); return p.floor + (1 - p.floor) * Math.max(0, 1 - d / p.width); },
-  wave:    function (id, k, n, t, p) { var ph = k / n - (t % p.speed) / p.speed; ph -= Math.floor(ph); return p.floor + (1 - p.floor) * Math.pow(Math.sin(ph * Math.PI), p.sharp); },
+  chase:   function (id, k, n, t, p, u) { var pos = ((t % p.speed) / p.speed) * n; var d = Math.abs(k - pos); d = Math.min(d, n - d); return p.floor + (1 - p.floor) * Math.max(0, 1 - d / p.width); },
+  wave:    function (id, k, n, t, p, u) { var ph = u - (t % p.speed) / p.speed; ph -= Math.floor(ph); return p.floor + (1 - p.floor) * Math.pow(Math.sin(ph * Math.PI), p.sharp); },
   sparkle: function (id, k, n, t, p) { var h = hash(id * 7.13 + Math.floor(t / p.rate) * 3.7); return h < p.density ? 1 : p.floor; },
   strobe:  function (id, k, n, t, p) { return Math.floor(t / p.period) % 2 === 0 ? 1 : 0; }
 };`;
@@ -160,13 +162,35 @@ const LOOK_PARAMS = {
   strobe:  { period: [30, 1000, 90, "ms"] },
 };
 function defaultParams(name) { const o = {}; for (const k in LOOK_PARAMS[name]) o[k] = LOOK_PARAMS[name][k][2]; return o; }
+// spatial orders for chase / wave, computed from the mapped positions: ids sorted, plus u = 0..1 position along the order
+const ORDERS = { "→": "left → right", "←": "right → left", "↓": "top → bottom", "↑": "bottom → top", "↻": "around ↻", "↺": "around ↺", "path": "snake path", "id": "by id" };
+function orderIds(ids, order) {
+  const P = (id) => S.layout[id] || { x: 0.5, y: 0.5 }, u = {};
+  if (!ids.length) return { ids: [], u };
+  if (order === "id") { const s = [...ids].sort((a, b) => a - b); s.forEach((id, i) => { u[id] = s.length > 1 ? i / (s.length - 1) : 0; }); return { ids: s, u }; }
+  if (order === "path") {
+    const rest = new Set(ids); let cur = [...ids].sort((a, b) => P(a).x - P(b).x)[0]; rest.delete(cur);
+    const path = [cur], dist = { [cur]: 0 }; let total = 0;
+    while (rest.size) { let best = null, bd = 1e9; for (const id of rest) { const d = Math.hypot(P(id).x - P(cur).x, P(id).y - P(cur).y); if (d < bd) { bd = d; best = id; } } rest.delete(best); total += bd; dist[best] = total; path.push(best); cur = best; }
+    path.forEach((id) => { u[id] = total ? dist[id] / total : 0; }); return { ids: path, u };
+  }
+  let val;
+  if (order === "↻" || order === "↺") {
+    const cx = ids.reduce((a, id) => a + P(id).x, 0) / ids.length, cy = ids.reduce((a, id) => a + P(id).y, 0) / ids.length;
+    val = (id) => { const a = (Math.atan2(P(id).y - cy, P(id).x - cx) + Math.PI) / (2 * Math.PI); return order === "↻" ? a : 1 - a; };
+  } else { const th = { "→": 0, "↓": Math.PI / 2, "←": Math.PI, "↑": -Math.PI / 2 }[order] || 0; val = (id) => P(id).x * Math.cos(th) + P(id).y * Math.sin(th); }
+  const vs = ids.map(val), mn = Math.min(...vs), mx = Math.max(...vs);
+  ids.forEach((id, i) => { u[id] = mx > mn ? (vs[i] - mn) / (mx - mn) : 0; });
+  return { ids: [...ids].sort((a, b) => u[a] - u[b]), u };
+}
+function setLookIds(ids) { const o = orderIds(ids, S.look.order || "→"); S.look.ids = o.ids; S.look.u = o.u; }
 
 // ---------- state ----------
 const S = {
   lights: {}, ids: [], frame: {}, fpsCount: 0, fps: 0, ws: null,
   scene: [], engine: null, selection: new Set(), layout: {}, editLayout: false,
   targets: {},                                   // id -> channels we believe the roomtone holds
-  look: LS.get("look", null) || { name: "none", params: {}, ids: [] },
+  look: LS.get("look", null) || { name: "none", params: {}, ids: [], order: "→" },
   prevLook: null, tau: LS.get("tau", 150), fade: LS.get("fade", 800),
   presets: LS.get("presets", null) || new Array(8).fill(null),
   midimap: LS.get("midimap", {}), learn: null, mutedByUs: LS.get("mutedByUs", []),
@@ -227,7 +251,7 @@ ${LOOK_SRC}
 var state = {}, lastT = 0, started = 0;
 function idx(look) { var m = {}; for (var i = 0; i < look.ids.length; i++) m[look.ids[i]] = i; return m; }
 var OLD_IDX = idx(OLD), NEW_IDX = idx(NEW);
-function env(look, map, id, t) { var k = map[id]; if (k === undefined) return 1; return LOOKS[look.name](id, k, look.ids.length, t, look.params); }
+function env(look, map, id, t) { var k = map[id]; if (k === undefined) return 1; var u = look.u && look.u[id] !== undefined ? look.u[id] : k / Math.max(1, look.ids.length - 1); return LOOKS[look.name](id, k, look.ids.length, t, look.params, u); }
 function update(prev, curr, init) {
   if (!started) started = curr;
   var dt = lastT ? Math.min(200, curr - lastT) : 10; lastT = curr;
@@ -426,7 +450,7 @@ cv.addEventListener("pointerdown", (ev) => {
   const [x, y] = canvasXY(ev), id = hit(x, y);
   if (S.editLayout && id !== null) {
     if (!S.selection.has(id)) { if (!ev.shiftKey) S.selection.clear(); S.selection.add(id); updateSelInfo(); }
-    drag = { move: id, ids: [...S.selection], lastX: x, lastY: y, moved: false }; needDraw = true; return;
+    drag = { move: id, ids: [...S.selection], lastX: x, lastY: y, moved: false, snap: JSON.stringify(S.layout) }; needDraw = true; return;
   }
   if (M.layer && id !== null && !ev.shiftKey) { identifyFix(id); S.selection = new Set([id]); updateSelInfo(); needDraw = true; drag = { clickOnly: true }; return; }
   if (id !== null) { if (!ev.shiftKey) S.selection.clear(); if (S.selection.has(id) && ev.shiftKey) S.selection.delete(id); else S.selection.add(id); drag = { clickOnly: true }; }
@@ -445,7 +469,7 @@ cv.addEventListener("pointermove", (ev) => {
 });
 cv.addEventListener("pointerup", () => {
   if (!drag) return;
-  if (drag.move) { if (drag.moved) { LS.set("layout", S.layout); autosave(); } else if (M.layer) identifyFix(drag.move); }
+  if (drag.move) { if (drag.moved) { layoutUndo = drag.snap; LS.set("layout", S.layout); autosave(); reflowLook(); } else if (M.layer) identifyFix(drag.move); }
   else if (drag.box) {
     const x0 = Math.min(drag.x0, drag.x1), x1 = Math.max(drag.x0, drag.x1), y0 = Math.min(drag.y0, drag.y1), y1 = Math.max(drag.y0, drag.y1);
     if (!drag.add) S.selection.clear();
@@ -453,6 +477,34 @@ cv.addEventListener("pointerup", () => {
   }
   drag = null; updateSelInfo(); needDraw = true;
 });
+// ---------- layout operations (pure: take a layout, return a new one) ----------
+function alignLayout(L, ids, axis) { const m = ids.reduce((a, id) => a + L[id][axis], 0) / ids.length; const out = Object.assign({}, L); ids.forEach((id) => { out[id] = Object.assign({}, L[id], { [axis]: m }); }); return out; }
+function spreadLayout(L, ids, axis) { const s = [...ids].sort((a, b) => L[a][axis] - L[b][axis]); const lo = L[s[0]][axis], hi = L[s[s.length - 1]][axis]; const out = Object.assign({}, L); s.forEach((id, i) => { out[id] = Object.assign({}, L[id], { [axis]: s.length > 1 ? lo + (hi - lo) * i / (s.length - 1) : lo }); }); return out; }
+function tidyLayout(L, ids, tolX, tolY) {
+  const out = Object.assign({}, L); ids.forEach((id) => { out[id] = Object.assign({}, L[id]); });
+  for (const [axis, tol] of [["x", tolX], ["y", tolY]]) {
+    const s = [...ids].sort((a, b) => out[a][axis] - out[b][axis]);
+    let cluster = [];
+    const flush = () => { if (cluster.length) { const m = cluster.reduce((a, id) => a + out[id][axis], 0) / cluster.length; cluster.forEach((id) => { out[id][axis] = m; }); } cluster = []; };
+    s.forEach((id) => { if (cluster.length && out[id][axis] - out[cluster[cluster.length - 1]][axis] > tol) flush(); cluster.push(id); });
+    flush();
+  }
+  return out;
+}
+let layoutUndo = null;
+function layoutOp(fn) {
+  const snap = JSON.stringify(S.layout); const next = fn(); if (!next) return;
+  layoutUndo = snap; S.layout = next; LS.set("layout", S.layout); autosave(); reflowLook(); needDraw = true;
+}
+function reflowLook() { if (S.look.ids.length && (S.look.name === "chase" || S.look.name === "wave")) { setLookIds(S.look.ids); requestEngine(); } }
+function editSel(min) { const p = new Set(plotted()); const sel = [...S.selection].filter((id) => p.has(id)); if (sel.length < min) { setStatus(`select at least ${min} dots first`, "warn"); return null; } return sel; }
+$("alignY").onclick = () => layoutOp(() => { const ids = editSel(2); return ids && alignLayout(S.layout, ids, "y"); });
+$("alignX").onclick = () => layoutOp(() => { const ids = editSel(2); return ids && alignLayout(S.layout, ids, "x"); });
+$("spreadX").onclick = () => layoutOp(() => { const ids = editSel(3); return ids && spreadLayout(S.layout, ids, "x"); });
+$("spreadY").onclick = () => layoutOp(() => { const ids = editSel(3); return ids && spreadLayout(S.layout, ids, "y"); });
+$("tidy").onclick = () => layoutOp(() => { const p = new Set(plotted()); const sel = [...S.selection].filter((id) => p.has(id)); const ids = sel.length >= 2 ? sel : plotted(); return tidyLayout(S.layout, ids, 14 / (cv.clientWidth || 1000), 14 / (cv.clientHeight || 600)); });
+$("layoutUndoBtn").onclick = () => { if (!layoutUndo) { setStatus("nothing to undo", "warn"); return; } const cur = JSON.stringify(S.layout); S.layout = JSON.parse(layoutUndo); layoutUndo = cur; LS.set("layout", S.layout); autosave(); reflowLook(); needDraw = true; };
+
 function select(pred) { S.selection = new Set(S.ids.filter(pred)); updateSelInfo(); needDraw = true; }
 $("selAll").onclick = () => { const p = new Set(plotted()); select((id) => p.has(id)); };
 $("sel4x1").onclick = () => select((id) => S.lights[id].type === "4x1");
@@ -461,7 +513,7 @@ $("selNone").onclick = () => select(() => false);
 $("selInv").onclick = () => { const old = S.selection, p = new Set(plotted()); select((id) => p.has(id) && !old.has(id)); };
 $("showOthers").onclick = () => { S.showOthers = !S.showOthers; LS.set("showOthers", S.showOthers); $("showOthers").classList.toggle("on", S.showOthers); document.body.classList.toggle("show-others", S.showOthers); needDraw = true; };
 $("layoutMore").onclick = () => { $("layoutMenu").hidden = !$("layoutMenu").hidden; };
-$("editLayout").onclick = () => { S.editLayout = !S.editLayout; $("editLayout").classList.toggle("on", S.editLayout); cv.classList.toggle("edit", S.editLayout); };
+$("editLayout").onclick = () => { S.editLayout = !S.editLayout; $("editLayout").classList.toggle("on", S.editLayout); cv.classList.toggle("edit", S.editLayout); document.body.classList.toggle("editing", S.editLayout); needDraw = true; };
 $("defaultLayout").onclick = () => { S.layout = defaultLayout(); LS.set("layout", S.layout); autosave(); needDraw = true; };
 $("exportLayout").onclick = () => download("arclight-layout.json", S.layout);
 $("importLayout").onclick = () => pickFile((o) => { S.layout = o; LS.set("layout", o); autosave(); needDraw = true; });
@@ -518,6 +570,9 @@ function renderLook() {
   const sel = $("look");
   if (!sel.children.length) Object.keys(LOOK_PARAMS).forEach((n) => { const o = document.createElement("option"); o.value = n; o.textContent = n; sel.appendChild(o); });
   sel.value = S.look.name;
+  const os = $("order");
+  if (!os.children.length) Object.keys(ORDERS).forEach((k) => { const o = document.createElement("option"); o.value = k; o.textContent = ORDERS[k]; os.appendChild(o); });
+  os.value = S.look.order || "→"; os.hidden = !(S.look.name === "chase" || S.look.name === "wave");
   const box = $("params"); box.innerHTML = "";
   for (const k in LOOK_PARAMS[S.look.name]) {
     const [mn, mx, df, unit] = LOOK_PARAMS[S.look.name][k];
@@ -532,9 +587,10 @@ function renderLook() {
   bindLearnButtons(box);
   $("fade").value = S.fade; $("fadeV").textContent = S.fade; $("tau").value = S.tau; $("tauV").textContent = S.tau;
 }
-$("look").onchange = () => { S.look.name = $("look").value; S.look.params = defaultParams(S.look.name); if (!S.look.ids.length) S.look.ids = S.ids.filter((id) => S.lights[id].type === "br30"); renderLook(); requestEngine(); };
-$("applyLook").onclick = () => { const ids = [...S.selection].filter((id) => S.lights[id].type !== "relay"); if (!ids.length) { setStatus("select some bulbs first", "warn"); return; } S.look.ids = ids; requestEngine(); setStatus(`look ${S.look.name} on ${ids.length} light(s)`, "ok"); };
-$("lookAll").onclick = () => { S.look.ids = S.ids.filter((id) => S.lights[id].type === "br30"); requestEngine(); };
+$("look").onchange = () => { S.look.name = $("look").value; S.look.params = defaultParams(S.look.name); setLookIds(S.look.ids.length ? S.look.ids : S.ids.filter((id) => S.lights[id].type === "br30")); renderLook(); requestEngine(); };
+$("order").onchange = () => { S.look.order = $("order").value; setLookIds(S.look.ids); requestEngine(); };
+$("applyLook").onclick = () => { const ids = [...S.selection].filter((id) => S.lights[id].type !== "relay"); if (!ids.length) { setStatus("select some bulbs first", "warn"); return; } setLookIds(ids); requestEngine(); setStatus(`look ${S.look.name} on ${ids.length} light(s)`, "ok"); };
+$("lookAll").onclick = () => { setLookIds(S.ids.filter((id) => S.lights[id].type === "br30")); requestEngine(); };
 $("fade").addEventListener("input", () => { S.fade = +$("fade").value; $("fadeV").textContent = S.fade; requestEngine(); });
 $("tau").addEventListener("input", () => { S.tau = +$("tau").value; $("tauV").textContent = S.tau; requestEngine(); });
 
