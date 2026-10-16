@@ -38,6 +38,7 @@ def load_token():
 
 
 def api(method, path, body=None):
+    global SERVER
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(
         SERVER + path, data=data, method=method,
@@ -49,7 +50,24 @@ def api(method, path, body=None):
     except urllib.error.HTTPError as e:
         sys.exit(f"{method} {path} -> HTTP {e.code}: {e.read().decode(errors='replace').strip()}")
     except urllib.error.URLError as e:
-        sys.exit(f"{method} {path} -> {e.reason} (is the Pi up? try: dns-sd -G v4 arclight.local)")
+        ip = arp_ip() if "arclight.local" in SERVER else None
+        if ip:
+            print(f"(arclight.local not resolving; using {ip} from the ARP cache)", file=sys.stderr)
+            SERVER = SERVER.replace("arclight.local", ip)
+            return api(method, path, body)
+        sys.exit(f"{method} {path} -> {e.reason} (is the Pi up? try: arp -a | grep b8:27:eb)")
+
+
+def arp_ip(mac="b8:27:eb:18:6a:bc"):
+    """The Pi's IP from the ARP cache, for when mDNS is flaky."""
+    import subprocess
+    try:
+        for line in subprocess.run(["arp", "-a"], capture_output=True, text=True, timeout=5).stdout.splitlines():
+            if mac in line.lower() and "(" in line:
+                return line.split("(")[1].split(")")[0]
+    except Exception:
+        pass
+    return None
 
 
 def lights_by_id():

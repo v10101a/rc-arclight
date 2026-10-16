@@ -200,8 +200,16 @@ function plotted() { return S.showOthers ? S.ids : S.ids.filter((id) => S.lights
 
 // ---------- api ----------
 function setStatus(msg, cls) { const el = $("status"); el.textContent = msg; el.className = "hint " + (cls || ""); }
+function base() { return (S.base || $("srv").value).replace(/\/+$/, ""); }
+// arclight.local often stops resolving on this network; tools/serve.py can find the Pi by MAC instead
+async function resolveServer() {
+  const typed = $("srv").value.replace(/\/+$/, "");
+  if (!/arclight\.local/i.test(typed)) { S.base = typed; return; }
+  try { const j = await (await fetch("api/resolve", { cache: "no-store" })).json(); if (j.ip) { S.base = typed.replace(/arclight\.local/i, j.ip); S.via = j.via; return; } } catch (e) {}
+  S.base = typed; S.via = null;
+}
 async function api(method, path, body) {
-  const r = await fetch($("srv").value.replace(/\/+$/, "") + path, {
+  const r = await fetch(base() + path, {
     method, headers: { Authorization: "Bearer " + $("tok").value, "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -290,6 +298,7 @@ async function uploadEngine() {
 async function connect() {
   LS.set("srv", $("srv").value); LS.set("tok", $("tok").value);
   setStatus("connecting…");
+  await resolveServer();
   try {
     const [lights, scene, room] = await Promise.all([api("GET", "/v1/lights"), api("GET", "/v1/scene"), api("GET", "/v1/shader/0")]);
     S.lights = {}; (lights.lights || []).forEach((l) => { S.lights[l.id] = l; });
@@ -311,20 +320,24 @@ async function connect() {
     if (idl.length) { M.layer = idl[0]; const m = idl[0].script.match(/^var IDS = (\[.*?\]), PERIOD = (\d+), FIXED = (null|\d+);$/m); if (m) { M.ids = JSON.parse(m[1]); M.period = +m[2]; M.fixed = m[3] === "null" ? null : +m[3]; } }
     renderIdentify();
     openStream(); renderScene(); renderColour(); updateSelInfo(); draw();
-    setStatus("connected " + new Date().toLocaleTimeString(), "ok");
-  } catch (e) { setStatus(e.message, "bad"); }
+    setStatus("connected " + (S.via ? "via " + S.base.replace(/^https?:\/\//, "") + " " : "") + new Date().toLocaleTimeString(), "ok");
+  } catch (e) { setStatus(e.message + (S.via ? "" : " (is arclight.local resolving? try its IP in the server box)"), "bad"); }
 }
 function openStream() {
   if (S.ws) { S.ws.onclose = null; S.ws.close(); }
-  const base = $("srv").value.replace(/^http/, "ws").replace(/\/+$/, "");
-  const ws = new WebSocket(base + "/v1/scene/ws?access_token=" + encodeURIComponent($("tok").value) + "&full=json");
+  const ws = new WebSocket(base().replace(/^http/, "ws") + "/v1/scene/ws?access_token=" + encodeURIComponent($("tok").value) + "&full=json");
   S.ws = ws;
+  ws.onopen = () => { S.wsRetry = 0; if (/^stream/.test($("status").textContent)) setStatus("stream back", "ok"); };
   ws.onmessage = (ev) => {
     let o; try { o = JSON.parse(ev.data); } catch (e) { return; }
     (o.lights || []).forEach((l) => { S.frame[l.id] = l.channels; });
     S.fpsCount++; needDraw = true;
   };
-  ws.onclose = () => { $("hFps").textContent = "–"; setStatus("stream closed; reconnecting…", "warn"); setTimeout(() => { if (S.ws === ws) openStream(); }, 2000); };
+  ws.onclose = () => {
+    $("hFps").textContent = "–"; S.wsRetry = Math.min(5000, (S.wsRetry || 250) * 2);
+    setStatus("stream closed; reconnecting in " + S.wsRetry / 1000 + " s", "warn");
+    setTimeout(async () => { if (S.ws !== ws) return; await resolveServer(); openStream(); }, S.wsRetry);
+  };
   ws.onerror = () => {};
 }
 setInterval(() => { S.fps = S.fpsCount; S.fpsCount = 0; updateHealth(); }, 1000);
