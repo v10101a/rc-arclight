@@ -5,6 +5,7 @@ Workspace for building my own interface to the **arclamp** lighting server that 
 I'm not changing it; everything here talks to its HTTP API on port 8080.
 
 - `docs/arclamp-api.md` — how the server works, every endpoint, measured speeds, open questions.
+- `docs/controller-design.md` — what's wrong with the current system and the design for the new controller.
 - `docs/lights.json` — snapshot of the fixture inventory (`GET /v1/lights`), 2026-10-15.
 - `tools/arclamp.py` — stdlib-only CLI: inspect the scene, reset it, set the roomtone, mute layers.
 - `tools/stream.py` — print the live output stream (needs `uv`).

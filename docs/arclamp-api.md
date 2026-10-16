@@ -88,7 +88,8 @@ Not GLSL. A layer is JavaScript, compiled in a sandboxed V8 on the Pi and called
 function update(prev, curr, init) {
   // curr: wall-clock ms since the Unix epoch (so curr % 8000 is a global clock shared by all layers)
   // init: epoch ms when this layer started
-  // prev: the previous frame (exact contents untested; see open questions)
+  // prev: the composited frame BELOW this layer (roomtone + every layer under it), NOT including
+  //       this layer's own last output. Shape: { lights: [ { id, channels: {...} }, ... ] }
   return { lights: [
     { id: 1, channels: { red: 0, green: 0, blue: 0, cold: 255, warm: 100 } },
   ] };
@@ -102,6 +103,24 @@ function update(prev, curr, init) {
 - `Math.random()` works but is unseeded and re-rolls every tick; the demos hash `curr` instead.
 - Because `curr` is wall-clock, two layers with the same period are phase-locked, and a layer
   re-uploaded with the same code resumes in phase.
+
+### Verified with an invisible probe layer (2026-10-15)
+
+A throwaway top layer wrote blue 0–3 (below visible) on four 4x1 fixtures to encode answers,
+then deleted itself:
+
+- **`prev` is the frame below you**: it carries channels you never wrote (roomtone values and
+  whatever layers underneath produced) and does *not* contain your own previous output. So a
+  layer at the top of the stack can read the roomtone as a set of targets and ease toward them.
+- **Scripts keep state between ticks.** A module-level `var n` incremented on every call cycled
+  0,1,2,3 across frames. A layer can hold its own eased values, phases, counters.
+- **`init` is the layer's start** (`curr - init` grew past 1 s as expected).
+- **The stream reports exact values.** The probe's 0–3 came back as exactly 0–3. Earlier sightings
+  of `warm: 9–12` on bulbs were a layer's output (the lightning demo keeps a dim base), not
+  dithering.
+- **Load kills the tick rate.** With 18 demo layers running the probe measured under 25 ticks/s
+  (the demos' comments assume ~100), the stream sat at ~10 fps, and a roomtone write took
+  **1.4 s** to appear on the stream even though the PUT returned in 69 ms. Keep the scene small.
 
 The 16 demo scripts live in `debug.html` (`const DEMOS = [...]`) and are the best examples.
 
@@ -180,17 +199,10 @@ clean room:
 
 ## Open questions
 
-- What exactly is `prev`: this layer's previous output, or the composited frame below it? If the
-  latter, a layer could smooth whatever the client writes into the roomtone. Test with a no-op
-  layer that encodes `prev` into one hidden light.
 - Relay threshold: which brightness value first turns a relay on (1? 128?).
 - Where the spec with "§7.3" lives, and the server source. The Pi's sshd accepts passwords, so
   whoever set it up has the login.
 - Why `respawns` climbs on healthy layers.
-- The stream sometimes shows bulbs 1–55 at `warm: 9–12` with everything else 0, a value no layer
-  emits (the top layer returns `warm: 0`). One of the debug page backups is named `pre-dither`, so
-  the server may dither or temporally smooth its output. Expect the stream to not exactly equal
-  what your script returned.
 - Whether the server has any notion of a "snapshot" or preset. Nothing in the API suggests it,
   so presets will be a client-side concern.
 
