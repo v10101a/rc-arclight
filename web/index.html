@@ -66,12 +66,24 @@
   <div id="plan">
     <div class="row">
       <button id="selAll">all</button><button id="selBulbs">bulbs 1–55</button><button id="sel4x1">4x1 56–63</button><button id="selRelays">relays 64–115</button><button id="selNone">none</button><button id="selInv">invert</button>
+      <button id="showOthers" title="also plot the 4x1s and relays (56–115)">show 56–115</button>
       <span class="hint" id="selInfo">0 selected</span>
       <span style="flex:1"></span>
       <button id="editLayout">edit layout</button><button id="exportLayout">export</button><button id="importLayout">import</button><button id="defaultLayout">default</button>
     </div>
     <canvas id="cv" height="520"></canvas>
-    <div class="hint">click = select · shift+click = add · drag = box select · "edit layout" then drag lights to where they really are. Dots show the live output of the whole layer stack.</div>
+    <div class="row" id="mapBar">
+      <span class="hint">identify</span>
+      <button id="idStart" title="light one light at a time, white, so you can see which dot is which">start sequence</button>
+      <button id="idPause" disabled>pause</button>
+      <button id="idPrev" disabled title="previous (←)">◀</button>
+      <button id="idNext" disabled title="next (→)">▶</button>
+      <button id="idStop" class="danger" disabled>stop</button>
+      <label class="hint">speed <input type="range" id="idSpeed" min="100" max="3000" step="50" style="width:120px;vertical-align:middle;accent-color:var(--acc)"> <span id="idSpeedV" class="warn"></span> ms</label>
+      <span id="idNow" class="warn"></span>
+    </div>
+    <div class="hint">click = select · shift+click = add · drag = box select · "edit layout": drag a dot to move it, drag a selected dot to move the whole selection. Dots show the live output of the whole layer stack.<br>
+    identify steps through the selection if there is one, otherwise bulbs 1–55. While it runs: click a dot to hold that light on, ← → step, space pauses. Stopping deletes its layer; the roomtone is never touched.</div>
   </div>
   <aside>
     <section>
@@ -156,8 +168,9 @@ const S = {
   prevLook: null, tau: LS.get("tau", 150), fade: LS.get("fade", 800),
   presets: LS.get("presets", null) || new Array(8).fill(null),
   midimap: LS.get("midimap", {}), learn: null, mutedByUs: LS.get("mutedByUs", []),
-  intensity: 1,
+  intensity: 1, showOthers: LS.get("showOthers", false),
 };
+function plotted() { return S.showOthers ? S.ids : S.ids.filter((id) => S.lights[id].type === "br30"); }
 
 // ---------- api ----------
 function setStatus(msg, cls) { const el = $("status"); el.textContent = msg; el.className = "hint " + (cls || ""); }
@@ -265,6 +278,9 @@ async function connect() {
       S.prevLook = JSON.parse(JSON.stringify(S.look));
       renderLook();
     } else { S.prevLook = null; await uploadEngine(); }
+    const idl = findIdentify(scene);
+    if (idl.length) { M.layer = idl[0]; const m = idl[0].script.match(/^var IDS = (\[.*?\]), PERIOD = (\d+), FIXED = (null|\d+);$/m); if (m) { M.ids = JSON.parse(m[1]); M.period = +m[2]; M.fixed = m[3] === "null" ? null : +m[3]; } }
+    renderIdentify();
     openStream(); renderScene(); renderColour(); updateSelInfo(); draw();
     setStatus("connected " + new Date().toLocaleTimeString(), "ok");
   } catch (e) { setStatus(e.message, "bad"); }
@@ -301,16 +317,19 @@ async function refreshScene() {
   try { S.scene = await api("GET", "/v1/scene"); } catch (e) { return; }
   const eng = findEngine(S.scene);
   if (eng) S.engine = eng; else if (S.engine) { S.engine = null; }
+  const idl = findIdentify(S.scene);
+  if (M.layer && !idl.find((d) => d.id === M.layer.id)) { M.layer = null; M.fixed = null; renderIdentify(); }
   renderScene(); updateHealth();
 }
 function note(d) { const s = (d.script || "").split("\n"); for (let i = 0; i < Math.min(4, s.length); i++) { const t = s[i].trim(); if (t.startsWith("//")) return t.slice(2).trim(); } return s[0] ? s[0].slice(0, 60) : ""; }
 function renderScene() {
   const box = $("layers"); box.innerHTML = "";
-  const top = S.scene.length ? S.scene[S.scene.length - 1] : null;
+  const top = [...S.scene].reverse().find((d) => !(d.script || "").startsWith(ID_TAG)) || null;
   [...S.scene].reverse().forEach((d) => {
     const row = document.createElement("div"); if (d.muted) row.className = "muted";
     const isEngine = S.engine && d.id === S.engine.id;
-    const label = d.id === 0 ? "roomtone (targets)" : isEngine ? "engine (ours)" : note(d);
+    const isIdent = (d.script || "").startsWith(ID_TAG);
+    const label = d.id === 0 ? "roomtone (targets)" : isEngine ? "engine (ours)" : isIdent ? "identify sequence (ours)" : note(d);
     row.innerHTML = `<span style="width:22px;color:var(--mut)">${d.position}</span><span class="n" title="${esc(d.script || "")}">#${d.id} ${esc(label)}</span>`;
     if (d.id !== 0) {
       row.appendChild(btn(d.muted ? "unmute" : "mute", async () => { await api("POST", `/v1/shader/${d.id}/muted`, { muted: !d.muted }); refreshScene(); }));
@@ -323,7 +342,7 @@ function renderScene() {
   const e = S.engine && S.scene.find((d) => d.id === S.engine.id);
   $("engineInfo").textContent = e ? `engine #${e.id} ${e.state}, respawns ${e.respawns}, position ${e.position}${top && top.id !== e.id ? " — NOT on top, something is covering it" : ""}` : "engine: none";
 }
-function foreignLayers() { return S.scene.filter((d) => d.id !== 0 && !(S.engine && d.id === S.engine.id)); }
+function foreignLayers() { return S.scene.filter((d) => d.id !== 0 && !(S.engine && d.id === S.engine.id) && !(d.script || "").startsWith(ID_TAG)); }
 async function ownRoom() {
   const victims = foreignLayers().filter((d) => !d.muted);
   for (const d of victims) { try { await api("POST", `/v1/shader/${d.id}/muted`, { muted: true }); S.mutedByUs.push(d.id); } catch (e) {} }
@@ -353,9 +372,9 @@ window.addEventListener("resize", resize);
 function defaultLayout() {
   const L = {}, by = (t) => S.ids.filter((id) => S.lights[id].type === t);
   const bulbs = by("br30"), fours = by("4x1"), relays = by("relay");
-  bulbs.forEach((id, i) => { L[id] = { x: 0.03 + 0.94 * i / Math.max(1, bulbs.length - 1), y: 0.16 }; });
-  fours.forEach((id, i) => { L[id] = { x: 0.2 + 0.6 * i / Math.max(1, fours.length - 1), y: 0.4 }; });
-  relays.forEach((id, i) => { L[id] = { x: 0.06 + 0.88 * (i % 13) / 12, y: 0.6 + 0.11 * Math.floor(i / 13) }; });
+  bulbs.forEach((id, i) => { L[id] = { x: 0.03 + 0.94 * i / Math.max(1, bulbs.length - 1), y: 0.12 }; });
+  fours.forEach((id, i) => { L[id] = { x: 0.2 + 0.6 * i / Math.max(1, fours.length - 1), y: 0.5 }; });
+  relays.forEach((id, i) => { L[id] = { x: 0.06 + 0.88 * (i % 13) / 12, y: 0.66 + 0.1 * Math.floor(i / 13) }; });
   let k = 0; S.ids.forEach((id) => { if (!L[id]) L[id] = { x: 0.05 + 0.05 * k++, y: 0.95 }; });
   return L;
 }
@@ -375,48 +394,63 @@ function draw() {
   ctx.clearRect(0, 0, cv.width, cv.height);
   const dpr = devicePixelRatio;
   ctx.font = `${9 * dpr}px ui-monospace, Menlo, monospace`; ctx.textAlign = "center";
-  for (const id of S.ids) {
+  for (const id of plotted()) {
     const [x, y] = pos(id), r = radius(id);
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = lightColor(S.frame[id] || {}); ctx.fill();
     ctx.lineWidth = 1 * dpr; ctx.strokeStyle = "#2c313b"; ctx.stroke();
     if (S.selection.has(id)) { ctx.beginPath(); ctx.arc(x, y, r + 3 * dpr, 0, Math.PI * 2); ctx.lineWidth = 2 * dpr; ctx.strokeStyle = "#6aa2ff"; ctx.stroke(); }
     ctx.fillStyle = "#8a93a3"; ctx.fillText(id, x, y + r + 10 * dpr);
   }
+  if (M.layer) {
+    const lit = M.fixed !== null ? M.fixed : litId();
+    if (lit !== null) { const [x, y] = pos(lit); ctx.beginPath(); ctx.arc(x, y, radius(lit) + 7 * dpr, 0, Math.PI * 2); ctx.lineWidth = 2 * dpr; ctx.strokeStyle = "#ffd166"; ctx.stroke(); }
+    if (lit !== M.lastLit) { M.lastLit = lit; $("idNow").textContent = lit !== null ? `now: #${lit}${M.fixed !== null ? " (held)" : ""}` : ""; }
+  }
   if (drag && drag.box) { ctx.strokeStyle = "#6aa2ff"; ctx.lineWidth = 1 * dpr; ctx.setLineDash([4 * dpr, 3 * dpr]); ctx.strokeRect(drag.x0, drag.y0, drag.x1 - drag.x0, drag.y1 - drag.y0); ctx.setLineDash([]); }
 }
 (function loop() { if (needDraw && S.ids.length) draw(); requestAnimationFrame(loop); })();
 function canvasXY(ev) { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) * cv.width / r.width, (ev.clientY - r.top) * cv.height / r.height]; }
-function hit(x, y) { let best = null, bd = 1e9; for (const id of S.ids) { const [px, py] = pos(id); const d = Math.hypot(px - x, py - y); if (d < radius(id) + 4 * devicePixelRatio && d < bd) { best = id; bd = d; } } return best; }
+function hit(x, y) { let best = null, bd = 1e9; for (const id of plotted()) { const [px, py] = pos(id); const d = Math.hypot(px - x, py - y); if (d < radius(id) + 4 * devicePixelRatio && d < bd) { best = id; bd = d; } } return best; }
 cv.addEventListener("pointerdown", (ev) => {
   if (!S.ids.length) return; cv.setPointerCapture(ev.pointerId);
   const [x, y] = canvasXY(ev), id = hit(x, y);
-  if (S.editLayout && id !== null) { drag = { move: id }; return; }
+  if (S.editLayout && id !== null) {
+    if (!S.selection.has(id)) { if (!ev.shiftKey) S.selection.clear(); S.selection.add(id); updateSelInfo(); }
+    drag = { move: id, ids: [...S.selection], lastX: x, lastY: y, moved: false }; needDraw = true; return;
+  }
+  if (M.layer && id !== null && !ev.shiftKey) { identifyFix(id); S.selection = new Set([id]); updateSelInfo(); needDraw = true; drag = { clickOnly: true }; return; }
   if (id !== null) { if (!ev.shiftKey) S.selection.clear(); if (S.selection.has(id) && ev.shiftKey) S.selection.delete(id); else S.selection.add(id); drag = { clickOnly: true }; }
   else drag = { box: true, x0: x, y0: y, x1: x, y1: y, add: ev.shiftKey };
   updateSelInfo(); needDraw = true;
 });
 cv.addEventListener("pointermove", (ev) => {
   if (!drag) return; const [x, y] = canvasXY(ev);
-  if (drag.move) { S.layout[drag.move] = { x: Math.min(1, Math.max(0, x / cv.width)), y: Math.min(1, Math.max(0, y / cv.height)) }; needDraw = true; }
+  if (drag.move) {
+    const dx = (x - drag.lastX) / cv.width, dy = (y - drag.lastY) / cv.height; drag.lastX = x; drag.lastY = y;
+    if (dx || dy) drag.moved = true;
+    for (const id of drag.ids) { const q = S.layout[id] || { x: 0.5, y: 0.5 }; S.layout[id] = { x: Math.min(1, Math.max(0, q.x + dx)), y: Math.min(1, Math.max(0, q.y + dy)) }; }
+    needDraw = true;
+  }
   else if (drag.box) { drag.x1 = x; drag.y1 = y; needDraw = true; }
 });
 cv.addEventListener("pointerup", () => {
   if (!drag) return;
-  if (drag.move) LS.set("layout", S.layout);
+  if (drag.move) { if (drag.moved) LS.set("layout", S.layout); else if (M.layer) identifyFix(drag.move); }
   else if (drag.box) {
     const x0 = Math.min(drag.x0, drag.x1), x1 = Math.max(drag.x0, drag.x1), y0 = Math.min(drag.y0, drag.y1), y1 = Math.max(drag.y0, drag.y1);
     if (!drag.add) S.selection.clear();
-    if (x1 - x0 > 3 || y1 - y0 > 3) for (const id of S.ids) { const [px, py] = pos(id); if (px >= x0 && px <= x1 && py >= y0 && py <= y1) S.selection.add(id); }
+    if (x1 - x0 > 3 || y1 - y0 > 3) for (const id of plotted()) { const [px, py] = pos(id); if (px >= x0 && px <= x1 && py >= y0 && py <= y1) S.selection.add(id); }
   }
   drag = null; updateSelInfo(); needDraw = true;
 });
 function select(pred) { S.selection = new Set(S.ids.filter(pred)); updateSelInfo(); needDraw = true; }
-$("selAll").onclick = () => select(() => true);
+$("selAll").onclick = () => { const p = new Set(plotted()); select((id) => p.has(id)); };
 $("selBulbs").onclick = () => select((id) => S.lights[id].type === "br30");
 $("sel4x1").onclick = () => select((id) => S.lights[id].type === "4x1");
 $("selRelays").onclick = () => select((id) => S.lights[id].type === "relay");
 $("selNone").onclick = () => select(() => false);
-$("selInv").onclick = () => { const old = S.selection; select((id) => !old.has(id)); };
+$("selInv").onclick = () => { const old = S.selection, p = new Set(plotted()); select((id) => p.has(id) && !old.has(id)); };
+$("showOthers").onclick = () => { S.showOthers = !S.showOthers; LS.set("showOthers", S.showOthers); $("showOthers").classList.toggle("on", S.showOthers); needDraw = true; };
 $("editLayout").onclick = () => { S.editLayout = !S.editLayout; $("editLayout").classList.toggle("on", S.editLayout); cv.classList.toggle("edit", S.editLayout); };
 $("defaultLayout").onclick = () => { S.layout = defaultLayout(); LS.set("layout", S.layout); needDraw = true; };
 $("exportLayout").onclick = () => download("arclight-layout.json", S.layout);
@@ -578,6 +612,72 @@ $("releaseRoom").onclick = releaseRoom;
 twoClick($("blackout"), blackout);
 twoClick($("resetScene"), resetScene);
 
+// ---------- identify / mapping sequence: its own layer on top, never touches the roomtone ----------
+const ID_TAG = "// arclight-identify v1";
+const M = { layer: null, fixed: null, period: LS.get("idPeriod", 500), ids: [], timer: null, lastLit: null };
+function identifyScript() {
+  const ch = {}; M.ids.forEach((id) => { ch[id] = S.lights[id].channels.map((c) => c.name); });
+  return `${ID_TAG}
+// generated by arclight web/index.html: lights one of IDS at a time (white) so the dots can be mapped
+var IDS = ${JSON.stringify(M.ids)}, PERIOD = ${M.period}, FIXED = ${M.fixed === null ? "null" : M.fixed};
+var CH = ${JSON.stringify(ch)};
+function update(prev, curr, init) {
+  var on = FIXED !== null ? FIXED : IDS[Math.floor(curr / PERIOD) % IDS.length];
+  var out = [];
+  for (var i = 0; i < IDS.length; i++) {
+    var id = IDS[i], chans = CH[id], c = {};
+    var hasWhite = chans.indexOf("cold") >= 0 || chans.indexOf("warm") >= 0 || chans.indexOf("brightness") >= 0;
+    for (var j = 0; j < chans.length; j++) { var n = chans[j]; c[n] = (id === on && (!hasWhite || n === "cold" || n === "warm" || n === "brightness")) ? 255 : 0; }
+    out.push({ id: id, channels: c });
+  }
+  return { lights: out };
+}`;
+}
+function findIdentify(scene) { return scene.filter((d) => d.id !== 0 && (d.script || "").startsWith(ID_TAG)); }
+async function identifyUpload() {
+  const script = identifyScript();
+  try {
+    if (M.layer) await api("PUT", "/v1/shader/" + M.layer.id, { script });
+    else M.layer = await api("POST", "/v1/scene/shader", { type: "js", script, position: "bottom" });
+  } catch (e) { setStatus("identify failed: " + e.message, "bad"); }
+  renderIdentify(); refreshScene();
+}
+function identifyStart() {
+  if (!S.ids.length) { setStatus("connect first", "warn"); return; }
+  const sel = [...S.selection].sort((a, b) => a - b);
+  M.ids = sel.length ? sel : S.ids.filter((id) => S.lights[id].type === "br30");
+  M.fixed = null; identifyUpload();
+  setStatus(`identify: stepping through ${M.ids.length} light(s), ${M.period} ms each`, "ok");
+}
+async function identifyStop() {
+  const layers = findIdentify(S.scene); if (M.layer && !layers.find((d) => d.id === M.layer.id)) layers.push(M.layer);
+  for (const d of layers) { try { await api("DELETE", "/v1/shader/" + d.id); } catch (e) {} }
+  M.layer = null; M.fixed = null; M.lastLit = null; $("idNow").textContent = ""; renderIdentify(); refreshScene(); needDraw = true;
+}
+function litId() { let best = null, bs = 0; for (const id of M.ids) { const f = S.frame[id] || {}; let sum = 0; for (const k in f) sum += f[k]; if (sum > bs) { bs = sum; best = id; } } return best; }
+function identifyFix(id) { if (!M.layer) return; M.fixed = id; $("idNow").textContent = `now: #${id} (held)`; identifyUpload(); }
+function identifyStep(dir) { if (!M.layer) return; const cur = M.fixed !== null ? M.fixed : litId(); let i = M.ids.indexOf(cur); i = (i + dir + M.ids.length) % M.ids.length; identifyFix(M.ids[i]); }
+function identifyPause() { if (!M.layer) return; if (M.fixed !== null) { M.fixed = null; identifyUpload(); } else identifyFix(litId() || M.ids[0]); }
+function renderIdentify() {
+  const on = !!M.layer;
+  $("idStart").classList.toggle("on", on); $("idStart").textContent = on ? "restart sequence" : "start sequence";
+  $("idPause").textContent = M.fixed !== null ? "resume" : "pause";
+  ["idPause", "idPrev", "idNext", "idStop"].forEach((i) => { $(i).disabled = !on; });
+  $("idSpeed").value = M.period; $("idSpeedV").textContent = M.period;
+}
+$("idStart").onclick = identifyStart;
+$("idStop").onclick = identifyStop;
+$("idPause").onclick = identifyPause;
+$("idPrev").onclick = () => identifyStep(-1);
+$("idNext").onclick = () => identifyStep(1);
+$("idSpeed").addEventListener("input", () => { M.period = +$("idSpeed").value; $("idSpeedV").textContent = M.period; LS.set("idPeriod", M.period); if (M.layer) { clearTimeout(M.timer); M.timer = setTimeout(identifyUpload, 300); } });
+window.addEventListener("keydown", (ev) => {
+  if (!M.layer || /INPUT|SELECT|TEXTAREA/.test(ev.target.tagName)) return;
+  if (ev.key === "ArrowRight") { identifyStep(1); ev.preventDefault(); }
+  else if (ev.key === "ArrowLeft") { identifyStep(-1); ev.preventDefault(); }
+  else if (ev.key === " ") { identifyPause(); ev.preventDefault(); }
+});
+
 // ---------- misc ----------
 function btn(label, fn) { const b = document.createElement("button"); b.textContent = label; b.onclick = (ev) => { ev.stopPropagation(); fn().catch((e) => setStatus(e.message, "bad")); }; return b; }
 function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
@@ -590,7 +690,7 @@ function pickFile(cb) { const f = $("filePick"); f.onchange = () => { const r = 
   $("srv").value = q.get("server") || LS.get("srv", null) || "http://arclight.local:8080";
   $("tok").value = q.get("token") || LS.get("tok", "");
   $("connect").onclick = connect;
-  resize(); renderLook(); renderPads(); renderColour();
+  resize(); renderLook(); renderPads(); renderColour(); renderIdentify(); $("showOthers").classList.toggle("on", S.showOthers);
   bindLearnButtons(document.querySelector("aside"));
   if ($("tok").value) connect();
 })();
