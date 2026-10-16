@@ -12,9 +12,10 @@
   header h1 { font-size:15px; margin:0 6px 0 0; }
   .health { display:flex; gap:14px; margin-left:auto; color:var(--mut); flex-wrap:wrap; }
   .health b { color:var(--fg); font-weight:600; font-variant-numeric: tabular-nums; }
-  main { display:grid; grid-template-columns: 1fr 360px; min-height: calc(100vh - 44px); }
-  #plan { padding:8px 10px; min-width:0; }
-  canvas { display:block; width:100%; border:1px solid var(--line); border-radius:6px; background:#0d0f13; cursor:crosshair; touch-action:none; }
+  main { display:grid; grid-template-columns: 1fr 360px; height: calc(100vh - 45px); }
+  #plan { padding:8px 10px; min-width:0; min-height:0; display:flex; flex-direction:column; }
+  #plan > .row, #plan > .hint { flex:none; }
+  canvas { display:block; width:100%; flex:1; min-height:300px; border:1px solid var(--line); border-radius:6px; background:#0d0f13; cursor:crosshair; touch-action:none; }
   canvas.edit { cursor:move; }
   aside { border-left:1px solid var(--line); background:var(--panel); padding:10px; overflow-y:auto; }
   section { margin-bottom:16px; }
@@ -44,7 +45,7 @@
   .layers button { padding:1px 6px; font-size:11px; }
   .hint { color:var(--mut); font-size:11px; }
   .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:var(--warn); }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { border-left:none; border-top:1px solid var(--line); } }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; height:auto; } #plan canvas { height:70vh; flex:none; } aside { border-left:none; border-top:1px solid var(--line); } }
 </style>
 </head>
 <body>
@@ -71,7 +72,7 @@
       <span style="flex:1"></span>
       <button id="editLayout">edit layout</button><button id="exportLayout">export</button><button id="importLayout">import</button><button id="defaultLayout">default</button>
     </div>
-    <canvas id="cv" height="520"></canvas>
+    <canvas id="cv"></canvas>
     <div class="row" id="mapBar">
       <span class="hint">identify</span>
       <button id="idStart" title="light one light at a time, white, so you can see which dot is which">start sequence</button>
@@ -367,8 +368,13 @@ function blackout() {
 // ---------- floor plan (plain canvas) ----------
 const cv = $("cv"), ctx = cv.getContext("2d");
 let needDraw = true, drag = null;
-function resize() { const w = cv.clientWidth || 800; if (cv.width !== Math.round(w * devicePixelRatio)) { cv.width = Math.round(w * devicePixelRatio); cv.height = Math.round(520 * devicePixelRatio); } needDraw = true; }
+function resize() {
+  const w = cv.clientWidth || 800, h = cv.clientHeight || 520, W = Math.round(w * devicePixelRatio), H = Math.round(h * devicePixelRatio);
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  needDraw = true;
+}
 window.addEventListener("resize", resize);
+new ResizeObserver(resize).observe(cv);
 function defaultLayout() {
   const L = {}, by = (t) => S.ids.filter((id) => S.lights[id].type === t);
   const bulbs = by("br30"), fours = by("4x1"), relays = by("relay");
