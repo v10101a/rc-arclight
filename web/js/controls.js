@@ -20,7 +20,7 @@ function renderColour() {
     bindLearnButtons(box);
   }
   if (sel.length) { // seed sliders from the first selected light's target (not an input event)
-    const t = S.targets[sel[0]] || {};
+    const t = S.base[sel[0]] || S.targets[sel[0]] || {};
     COLOUR_CHANS.forEach((c) => { if (t[c] !== undefined) { colourSliders[c].value = Math.round(t[c] / (S.intensity || 1)); colourSliders[c].nextElementSibling.textContent = colourSliders[c].value; } });
   }
 }
@@ -31,13 +31,13 @@ function writeColour() {
     const have = new Set(l.channels.map((c) => c.name)); map[id] = {};
     COLOUR_CHANS.forEach((c) => { if (have.has(c)) map[id][c] = Math.round(colourSliders[c].value * S.intensity); });
   }
-  if (Object.keys(map).length) queueTargets(map);
+  if (Object.keys(map).length) setBase(map);
 }
 function writeRelays(on) {
   const map = {};
   for (const id of S.selection) if (S.lights[id] && S.lights[id].type === "relay") map[id] = { brightness: on ? 255 : 0 };
   if (!Object.keys(map).length) { setStatus("no relays selected", "warn"); return; }
-  queueTargets(map);
+  setBase(map);
 }
 $("relayOn").onclick = () => writeRelays(true);
 $("relayOff").onclick = () => writeRelays(false);
@@ -45,8 +45,12 @@ $("relayOff").onclick = () => writeRelays(false);
 // ---------- look UI ----------
 function renderLook() {
   const sel = $("look");
-  if (!sel.children.length) Object.keys(LOOK_PARAMS).forEach((n) => { const o = document.createElement("option"); o.value = n; o.textContent = n; sel.appendChild(o); });
+  if (!sel.children.length) {
+    const add = (label, names) => { if (!names.length) return; const og = document.createElement("optgroup"); og.label = label; names.forEach((n) => { const o = document.createElement("option"); o.value = n; o.textContent = n; og.appendChild(o); }); sel.appendChild(og); };
+    add("on the Pi", Object.keys(LOOK_PARAMS).filter((n) => !LIVE[n])); add("live, from this page", Object.keys(LIVE));
+  }
   sel.value = S.look.name;
+  $("lookInfo").textContent = LIVE[S.look.name] ? "live: keep this page open" : "";
   const os = $("order");
   if (!os.children.length) Object.keys(ORDERS).forEach((k) => { const o = document.createElement("option"); o.value = k; o.textContent = ORDERS[k]; os.appendChild(o); });
   os.value = S.look.order || "rows"; os.hidden = !(S.look.name === "chase" || S.look.name === "wave");
@@ -83,14 +87,14 @@ function renderPads() {
     box.appendChild(b);
   });
 }
-async function savePreset(i) {
-  try { const room = await api("GET", "/v1/shader/0"); S.presets[i] = { at: new Date().toLocaleString(), targets: room.template.lights, look: JSON.parse(JSON.stringify(S.look)), tau: S.tau, fade: S.fade }; LS.set("presets", S.presets); autosave(); renderPads(); setStatus("saved preset " + (i + 1), "ok"); }
-  catch (e) { setStatus(e.message, "bad"); }
+function savePreset(i) {
+  S.presets[i] = { at: new Date().toLocaleString(), targets: copyCh(S.base), look: JSON.parse(JSON.stringify(S.look)), tau: S.tau, fade: S.fade };
+  LS.set("presets", S.presets); autosave(); renderPads(); setStatus("saved preset " + (i + 1), "ok");
 }
 function recallPreset(i) {
   const p = S.presets[i]; if (!p) return;
   const map = {}; for (const k in p.targets) map[+k] = p.targets[k];
-  queueTargets(map);
+  setBase(map);
   S.look = JSON.parse(JSON.stringify(p.look)); S.tau = p.tau; S.fade = p.fade; renderLook(); requestEngine(); renderColour();
   setStatus("recalled preset " + (i + 1), "ok");
 }
@@ -149,6 +153,7 @@ function onMidi(ev) {
   else if (type === 0x90 && d2 > 0) { key = `note:${ch}:${d1}`; val = d2 / 127; isTrigger = true; isNote = true; }   // note on: level = velocity
   else if (type === 0x80 || (type === 0x90 && d2 === 0)) { key = `note:${ch}:${d1}`; val = 0; isNote = true; release = true; }  // note off: level 0
   else return;
+  IN.midi[isNote ? "note" : "cc"][ch + ":" + d1] = val;                 // the input bus sees every cc and note, bound or not
   if (!release) $("midiLast").textContent = key + " " + d2;
   if (S.learn) { if (release) return; keysFor(S.learn).forEach((k) => { delete S.midimap[k]; }); S.midimap[key] = S.learn; LS.set("midimap", S.midimap); autosave(); S.learn = null; document.querySelectorAll(".learn").forEach(markBound); renderPads(); renderGroups(); setStatus("bound " + key, "ok"); return; }
   const target = S.midimap[key]; if (!target) return;
@@ -180,7 +185,7 @@ function playGroup(name, level) {
     l.channels.forEach((c) => { v[c.name] = c.name === "brightness" ? (level > 0 ? 255 : 0) : Math.round((base[c.name] || 0) * level); });
     map[id] = v;
   });
-  queueTargets(map); needDraw = true;
+  setBase(map);
 }
 $("midiEnable").onclick = toggleMidi;
 $("clearMidi").onclick = () => { S.midimap = {}; LS.set("midimap", {}); autosave(); document.querySelectorAll(".learn").forEach(markBound); };

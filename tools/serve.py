@@ -6,7 +6,7 @@
 GET  anything          -> static file from web/ (no caching)
 GET  /api/resolve      -> {"ip": "...", "via": "mdns"|"arp"}: the Pi's current IP, by name or, when
                           mDNS is flaky (it often is here), by its MAC address in the ARP cache
-POST /data/<name>.json -> writes web/data/<name>.json (name in: layout, presets, midimap)
+POST /data/<name>.json -> writes web/data/<name>.json (name in: layout, presets, midimap, room)
 """
 import concurrent.futures
 import functools
@@ -18,7 +18,7 @@ import subprocess
 import sys
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web"))
-ALLOWED = {"layout", "presets", "midimap"}
+ALLOWED = {"layout", "presets", "midimap", "room"}
 ARCLIGHT_HOST = os.environ.get("ARCLIGHT_HOST", "arclight.local")
 ARCLIGHT_MAC = os.environ.get("ARCLIGHT_MAC", "b8:27:eb:18:6a:bc")
 

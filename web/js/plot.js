@@ -99,9 +99,10 @@ function drawFloor() {
     g.ids.forEach((id, i) => { const [x, y] = pos(id); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke(); ctx.globalAlpha = 1;
   }
 }
-// what colour a dot shows: the live frame if the stream is up, else the last known target, dimmed, else off
+// what colour a dot shows: the live frame if the stream is up, else the simulator's, else the last known target dimmed, else off
 function dotRGB(id) {
   if (S.ws && S.ws.readyState === 1 && S.frame[id]) return [lightRGB(S.frame[id]), true];
+  if (S.sim) { const f = SIM.frame[id] || S.room[id]; if (f) return [lightRGB(f), true]; }
   if (S.targets[id]) { const c = lightRGB(S.targets[id]); return [[c[0] * 0.45 | 0, c[1] * 0.45 | 0, c[2] * 0.45 | 0], false]; }
   return [[42, 39, 51], false];
 }
@@ -120,10 +121,15 @@ function draw() {
     const gOn = g && groupSelected(g);
     ctx.lineWidth = (gOn ? 2.5 : 1.5) * dpr; ctx.strokeStyle = gOn ? g.color : "rgba(255,255,255,.14)"; ctx.stroke();
     if (S.selection.has(id)) { ctx.beginPath(); ctx.arc(x, y, r + 3.5 * dpr, 0, Math.PI * 2); ctx.lineWidth = 2.5 * dpr; ctx.strokeStyle = "#ffffff"; ctx.stroke(); }
-    if (r >= 8 * dpr) {
-      ctx.font = `800 ${Math.round(r * 0.95)}px ${"ui-rounded, system-ui, sans-serif"}`; ctx.textBaseline = "middle";
-      ctx.fillStyle = lum > 120 ? "rgba(20,18,26,.9)" : "rgba(240,238,245,.9)"; ctx.fillText(id, x, y + 0.5 * dpr); ctx.textBaseline = "alphabetic";
-    } else if (S.editLayout || S.selection.has(id)) { ctx.font = `${9 * dpr}px ui-rounded, system-ui, sans-serif`; ctx.fillStyle = "#8a93a3"; ctx.fillText(id, x, y + r + 10 * dpr); }
+    // numbers only where you need them (selected, under the pointer, or editing the layout), always white on a dark
+    // halo: a live frame changes the fill every tick, and text that flips dark/light to stay readable flickers
+    if (S.editLayout || S.selection.has(id) || S.hover === id) {
+      if (r >= 8 * dpr) {
+        ctx.font = `800 ${Math.round(r * 0.95)}px ui-rounded, system-ui, sans-serif`; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
+        ctx.lineWidth = 3 * dpr; ctx.strokeStyle = "rgba(20,18,26,.75)"; ctx.strokeText(id, x, y + 0.5 * dpr);
+        ctx.fillStyle = "#F7F5FA"; ctx.fillText(id, x, y + 0.5 * dpr); ctx.textBaseline = "alphabetic";
+      } else { ctx.font = `${9 * dpr}px ui-rounded, system-ui, sans-serif`; ctx.fillStyle = "#8a93a3"; ctx.fillText(id, x, y + r + 10 * dpr); }
+    }
   }
   if (drag && drag.box) {
     const bx = Math.min(drag.x0, drag.x1), by = Math.min(drag.y0, drag.y1), bw = Math.abs(drag.x1 - drag.x0), bh = Math.abs(drag.y1 - drag.y0);
@@ -131,7 +137,7 @@ function draw() {
     ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 1.5 * dpr; ctx.setLineDash([6 * dpr, 4 * dpr]); ctx.strokeRect(bx, by, bw, bh); ctx.setLineDash([]);
   }
 }
-(function loop() { if (needDraw && S.ids.length) draw(); requestAnimationFrame(loop); })();
+(function loop() { if (typeof tick === "function") tick(performance.now()); if (needDraw && S.ids.length) draw(); requestAnimationFrame(loop); })();
 function canvasXY(ev) { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) * cv.width / r.width, (ev.clientY - r.top) * cv.height / r.height]; }
 function hit(x, y) { let best = null, bd = 1e9; for (const id of plotted()) { const [px, py] = pos(id); const d = Math.hypot(px - x, py - y); if (d < radius(id) + 4 * devicePixelRatio && d < bd) { best = id; bd = d; } } return best; }
 cv.addEventListener("wheel", (ev) => {
@@ -155,8 +161,10 @@ cv.addEventListener("pointerdown", (ev) => {
   else drag = { box: true, x0: x, y0: y, x1: x, y1: y, add: ev.shiftKey };
   updateSelInfo(); needDraw = true;
 });
+cv.addEventListener("pointerleave", () => { if (S.hover !== null) { S.hover = null; needDraw = true; } });
 cv.addEventListener("pointermove", (ev) => {
-  if (!drag) return; const [x, y] = canvasXY(ev);
+  const [x, y] = canvasXY(ev);
+  if (!drag) { const h = hit(x, y); if (h !== S.hover) { S.hover = h; needDraw = true; } return; }
   if (drag.pan) { const s = drag.view0.w / cv.width; view = Object.assign({}, drag.view0, { x: drag.view0.x - (x - drag.x) * s, y: drag.view0.y - (y - drag.y) * s }); needDraw = true; return; }
   if (drag.move) {
     const dx = (x - drag.lastX) / sx(), dy = (y - drag.lastY) / sx(); drag.lastX = x; drag.lastY = y;

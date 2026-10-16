@@ -29,6 +29,8 @@ const LOOK_PARAMS = {
   sparkle: { rate: [20, 2000, 150, "ms"], density: [0, 1, 0.3, ""], floor: [0, 1, 0.2, ""] },
   strobe: { period: [30, 1000, 90, "ms"] },
 };
+// live looks run in this page, read the input bus (js/inputs.js) and stream targets to the Pi; js/live.js fills this in
+const LIVE = {};
 function defaultParams(name) { const o = {}; for (const k in LOOK_PARAMS[name]) o[k] = LOOK_PARAMS[name][k][2]; return o; }
 // spatial orders for chase / wave, computed from the mapped positions: ids sorted, plus u = 0..1 position along the order
 const ORDERS = { "rows": "row by row", "→": "left → right", "←": "right → left", "↓": "top → bottom", "↑": "bottom → top", "↻": "around ↻", "↺": "around ↺", "path": "snake path", "id": "by id" };
@@ -60,8 +62,11 @@ function setLookIds(ids) { const o = orderIds(ids, S.look.order || "rows"); S.lo
 // ---------- state ----------
 const S = {
   lights: {}, ids: [], frame: {}, fpsCount: 0, fps: 0, ws: null,
-  scene: [], engine: null, selection: new Set(), layout: {}, editLayout: false,
-  targets: {},                                   // id -> channels we believe the roomtone holds
+  scene: [], engine: null, selection: new Set(), layout: {}, editLayout: false, hover: null,
+  base: {},                                      // id -> channels the user asked for (sliders, presets, group plays)
+  targets: {},                                   // id -> channels asked of the roomtone (base, or a live look's output), pending writes included
+  room: {},                                      // id -> channels the roomtone holds as far as sent writes go; the simulator reads this
+  liveIds: new Set(), online: null, sim: false,  // lights a live look drives; connected?; is the simulator showing on the plot
   look: LS.get("look", null) || { name: "none", params: {}, ids: [], order: "rows" },
   prevLook: null, tau: LS.get("tau", 150), fade: LS.get("fade", 800),
   presets: LS.get("presets", null) || new Array(8).fill(null),
@@ -74,13 +79,13 @@ function plotted() { return S.showOthers ? S.ids : S.ids.filter((id) => S.lights
 
 // ---------- api ----------
 function setStatus(msg, cls) { const el = $("status"); el.textContent = msg; el.className = "hint " + (cls || ""); }
-function base() { return (S.base || $("srv").value).replace(/\/+$/, ""); }
+function base() { return (S.server || $("srv").value).replace(/\/+$/, ""); }
 // arclight.local often stops resolving on this network; tools/serve.py can find the Pi by MAC instead
 async function resolveServer() {
   const typed = $("srv").value.replace(/\/+$/, "");
-  if (!/arclight\.local/i.test(typed)) { S.base = typed; return; }
-  try { const j = await (await fetch("api/resolve", { cache: "no-store" })).json(); if (j.ip) { S.base = typed.replace(/arclight\.local/i, j.ip); S.via = j.via; return; } } catch (e) { }
-  S.base = typed; S.via = null;
+  if (!/arclight\.local/i.test(typed)) { S.server = typed; return; }
+  try { const j = await (await fetch("api/resolve", { cache: "no-store" })).json(); if (j.ip) { S.server = typed.replace(/arclight\.local/i, j.ip); S.via = j.via; return; } } catch (e) { }
+  S.server = typed; S.via = null;
 }
 async function api(method, path, body) {
   const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 8000);
@@ -97,7 +102,16 @@ async function api(method, path, body) {
 }
 
 // ---------- write scheduler: one request in flight, targets coalesced at <= 10 Hz ----------
-const Q = { pending: {}, inflight: false, timer: null, lastLat: 0, engineDirty: false, engineTimer: null };
+const Q = { pending: {}, inflight: false, timer: null, lastSend: 0, lastLat: 0, engineDirty: false, engineTimer: null };
+const copyCh = (o) => { const out = {}; for (const id in o) out[id] = Object.assign({}, o[id]); return out; };
+// what the user wants a light to be; a live look reads it and writes its own output for the lights it drives
+function setBase(map) {
+  const fwd = {};
+  for (const id in map) { S.base[id] = Object.assign(S.base[id] || {}, map[id]); if (!S.liveIds.has(+id)) fwd[id] = map[id]; }
+  if (Object.keys(fwd).length) queueTargets(fwd);
+  needDraw = true;
+}
+// what the roomtone should hold; goes to the Pi when connected, and the simulator shows it either way
 function queueTargets(map) {
   for (const id in map) {
     Q.pending[id] = Object.assign(Q.pending[id] || {}, map[id]);
@@ -105,11 +119,14 @@ function queueTargets(map) {
   }
   scheduleFlush();
 }
-function scheduleFlush() { if (Q.timer || Q.inflight) return; Q.timer = setTimeout(flush, 100); }
+function scheduleFlush() { if (Q.timer || Q.inflight) return; Q.timer = setTimeout(flush, Math.max(0, 100 - (performance.now() - Q.lastSend))); }
 async function flush() {
   Q.timer = null;
   if (Q.inflight) return;
   const body = Q.pending; Q.pending = {};
+  for (const id in body) S.room[id] = Object.assign(S.room[id] || {}, body[id]);
+  Q.lastSend = performance.now();
+  if (!S.online) { if (Q.engineDirty) commitEngine(engineScript()); return; }      // offline: the simulator shows S.room, nothing to send
   if (!Object.keys(body).length) { if (Q.engineDirty) uploadEngine(); updateHealth(); return; }
   Q.inflight = true; const t = performance.now();
   try { await api("PUT", "/v1/shader/0", { lights: body }); Q.lastLat = performance.now() - t; }
@@ -123,17 +140,21 @@ function requestEngine() {
   clearTimeout(Q.engineTimer);
   Q.engineTimer = setTimeout(() => { Q.engineDirty = true; if (!Q.inflight && !Q.timer) flush(); }, 300);
 }
+// the engine script is final: the simulator takes it now; uploadEngine gives it to the Pi when connected
+function commitEngine(script) { Q.engineDirty = false; simCompile(script); S.prevLook = JSON.parse(JSON.stringify(S.look)); }
 
 // ---------- engine layer (generated JS that runs on the Pi) ----------
 function engineScript() {
   const smoothIds = S.ids.filter((id) => S.lights[id].type !== "relay");
-  const old = S.prevLook || { name: "none", params: {}, ids: [] };
+  const pi = (l) => LIVE[l.name] ? Object.assign({}, l, { name: "none" }) : l;   // a live look writes the targets itself: the Pi only smooths
+  const old = pi(S.prevLook || { name: "none", params: {}, ids: [] }), now = pi(S.look);
   return `${ENGINE_TAG}
 // generated by arclight web/index.html -- edit the page, not this
 var TAU = ${S.tau}, FADE = ${S.fade};
 var SMOOTH_IDS = ${JSON.stringify(smoothIds)};
 var OLD = ${JSON.stringify(old)};
-var NEW = ${JSON.stringify(S.look)};
+var NEW = ${JSON.stringify(now)};
+var UI = ${JSON.stringify(S.look)};
 ${LOOK_SRC}
 var state = {}, lastT = 0, started = 0;
 function idx(look) { var m = {}; for (var i = 0; i < look.ids.length; i++) m[look.ids[i]] = i; return m; }
@@ -163,7 +184,7 @@ async function uploadEngine() {
   if (Q.inflight) { Q.engineDirty = true; return; }
   Q.engineDirty = false; Q.inflight = true; const t = performance.now();
   try {
-    const script = engineScript();
+    const script = engineScript(); simCompile(script);
     if (S.engine) await api("PUT", "/v1/shader/" + S.engine.id, { script });
     else S.engine = await api("POST", "/v1/scene/shader", { type: "js", script, position: "bottom" });
     S.prevLook = JSON.parse(JSON.stringify(S.look));
@@ -184,28 +205,39 @@ async function connect() {
   const showPlan = () => { if (!Object.keys(S.layout).length) S.layout = defaultLayout(); if (fillMissing()) saveLayout(); fitView(); updateSelInfo(); draw(); };
   const cached = await loadData("lights");            // last known fixture list: draw the plan right away
   if (cached) { setLights(cached); showPlan(); }
+  if (S.presets.every((p) => !p)) { const f = await loadData("presets"); if (Array.isArray(f)) { S.presets = f; LS.set("presets", f); renderPads(); } }
+  if (!Object.keys(S.midimap).length) { const f = await loadData("midimap"); if (f && typeof f === "object") { S.midimap = f; LS.set("midimap", f); } }
+  if (!Object.keys(S.base).length && S.ids.length) {    // the simulator starts from the room as last seen (web/data/room.json), else a warm white
+    S.base = (await loadData("room")) || defaultRoom(); S.targets = copyCh(S.base); S.room = copyCh(S.base); renderColour();
+  }
   await resolveServer();
   let lights, scene, room, offline = null;
   try { [lights, scene, room] = await Promise.all([api("GET", "/v1/lights"), api("GET", "/v1/scene"), api("GET", "/v1/shader/0")]); }
   catch (e) { offline = e; }
   if (lights) { setLights(lights); showPlan(); }
-  if (offline) { setStatus("Pi unreachable (" + offline.message + "): layout only, no live colours. Is arclight.local on this network?", "bad"); return; }
+  if (offline) { S.online = false; updateHealth(); setStatus("Offline · simulating (" + offline.message + ")", "warn"); return; }
   try {
+    S.online = true;
     S.targets = {}; const tl = (room.template && room.template.lights) || {};
     for (const k in tl) S.targets[+k] = Object.assign({}, tl[k]);
-    if (S.presets.every((p) => !p)) { const f = await loadData("presets"); if (Array.isArray(f)) { S.presets = f; LS.set("presets", f); renderPads(); } }
-    if (!Object.keys(S.midimap).length) { const f = await loadData("midimap"); if (f && typeof f === "object") { S.midimap = f; LS.set("midimap", f); } }
+    S.base = copyCh(S.targets); S.room = copyCh(S.targets); saveData("room", S.base);
     autosave();
     S.scene = scene; S.engine = findEngine(scene);
     if (S.engine) {
-      const m = (S.engine.script || "").match(/^var NEW = (.*);$/m);
+      const src = S.engine.script || "", m = src.match(/^var UI = (.*);$/m) || src.match(/^var NEW = (.*);$/m);
       if (m) { try { S.look = JSON.parse(m[1]); LS.set("look", S.look); } catch (e) { } }
       S.prevLook = JSON.parse(JSON.stringify(S.look));
-      renderLook();
+      renderLook(); simCompile(engineScript());
     } else { S.prevLook = null; await uploadEngine(); }
     openStream(); renderScene(); renderColour(); updateSelInfo(); draw();
-    setStatus("Connected" + (S.via ? " via " + S.base.replace(/^https?:\/\//, "") : "") + " at " + new Date().toLocaleTimeString(), "ok");
-  } catch (e) { setStatus(e.message + (S.via ? "" : " (is arclight.local resolving? try its IP in the server box)"), "bad"); }
+    setStatus("Connected" + (S.via ? " via " + S.server.replace(/^https?:\/\//, "") : "") + " at " + new Date().toLocaleTimeString(), "ok");
+  } catch (e) { S.online = false; setStatus(e.message + (S.via ? "" : " (is arclight.local resolving? try its IP in the server box)"), "bad"); }
+}
+// a soft warm white on every colour light: what the simulator shows before it has ever seen the room
+function defaultRoom() {
+  const o = {};
+  for (const id of S.ids) { const ch = {}; (S.lights[id].channels || []).forEach((c) => { ch[c.name] = c.name === "warm" ? 170 : c.name === "cold" ? 50 : 0; }); o[id] = ch; }
+  return o;
 }
 function openStream() {
   if (S.ws) { S.ws.onclose = null; S.ws.close(); }
@@ -225,7 +257,7 @@ function openStream() {
   ws.onerror = () => { };
 }
 setInterval(() => { S.fps = S.fpsCount; S.fpsCount = 0; updateHealth(); }, 1000);
-setInterval(() => { if (S.ids.length && !Q.inflight) refreshScene(); }, 4000);
+setInterval(() => { if (S.online && S.ids.length && !Q.inflight) refreshScene(); }, 4000);
 function updateHealth() {
   $("hFps").textContent = S.ws && S.ws.readyState === 1 ? S.fps : "–";
   $("hFps").className = S.fps < 15 && S.ws ? "warn" : "";
@@ -233,8 +265,8 @@ function updateHealth() {
   $("hLat").className = Q.lastLat > 300 ? "warn" : "";
   $("hLayers").textContent = S.scene.length ? S.scene.length - 1 : "–";
   const e = S.engine && S.scene.find((d) => d.id === S.engine.id);
-  $("hEngine").textContent = e ? e.state + (e.muted ? " (muted)" : "") : "none";
-  $("hEngine").className = e && e.state === "running" && !e.muted ? "ok" : "bad";
+  $("hEngine").textContent = e ? e.state + (e.muted ? " (muted)" : "") : S.sim ? "sim" : "none";
+  $("hEngine").className = e && e.state === "running" && !e.muted ? "ok" : S.sim && !e ? "" : "bad";
 }
 
 // ---------- scene / layers ----------
@@ -287,7 +319,7 @@ async function resetScene() {
 function blackout() {
   const map = {};
   S.ids.forEach((id) => { map[id] = {}; S.lights[id].channels.forEach((c) => { map[id][c.name] = 0; }); });
-  queueTargets(map); ownRoom(); renderColour();
+  setBase(map); if (S.online) ownRoom(); renderColour();
 }
 
 // ---------- saving into the repo (web/data/*.json via tools/serve.py) ----------
@@ -297,9 +329,11 @@ let saveTimer = null;
 function autosave() { clearTimeout(saveTimer); saveTimer = setTimeout(() => saveAll(false), 800); }
 async function saveAll(loud) {
   const ok = (await saveData("layout", Object.assign({ _frame: FP.ID }, S.layout))) && (await saveData("presets", S.presets)) && (await saveData("midimap", S.midimap));
+  if (Object.keys(S.base).length) saveData("room", S.base);   // the room as last seen, for the simulator next time
   if (loud || !ok) setStatus(ok ? "saved to web/data/" : "not saved: run tools/serve.py (or use ⋯ export)", ok ? "ok" : "warn");
 }
 $("saveAll").onclick = () => saveAll(true);
+addEventListener("pagehide", () => { if (Object.keys(S.base).length) fetch("data/room.json", { method: "POST", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify(S.base) }).catch(() => { }); });
 
 // ---------- misc ----------
 function btn(label, fn) { const b = document.createElement("button"); b.textContent = label; b.onclick = (ev) => { ev.stopPropagation(); fn().catch((e) => setStatus(e.message, "bad")); }; return b; }
