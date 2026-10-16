@@ -1,0 +1,2393 @@
+{
+    "id_width": 1,
+    "lights": [
+        {
+            "id": 1,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 3,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 4,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 5,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 6,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 7,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 8,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 9,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 10,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 11,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 12,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 13,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 14,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 15,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 16,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 17,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 18,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 19,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 20,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 21,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 22,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 23,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 24,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 25,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 26,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 27,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 28,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 29,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 30,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 31,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 32,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 33,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 34,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 35,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 36,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 37,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 38,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 39,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 40,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 41,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 42,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 43,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 44,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 45,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 46,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 47,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 48,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 49,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 50,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 51,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 52,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 53,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 54,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 55,
+            "type": "br30",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 56,
+            "type": "4x1",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 57,
+            "type": "4x1",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 58,
+            "type": "4x1",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 59,
+            "type": "4x1",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 60,
+            "type": "4x1",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 61,
+            "type": "4x1",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 62,
+            "type": "4x1",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 63,
+            "type": "4x1",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "red",
+                    "depth": 8
+                },
+                {
+                    "name": "green",
+                    "depth": 8
+                },
+                {
+                    "name": "blue",
+                    "depth": 8
+                },
+                {
+                    "name": "cold",
+                    "depth": 8
+                },
+                {
+                    "name": "warm",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 64,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 65,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 66,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 67,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 68,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 69,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 70,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 71,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 72,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 73,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 74,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 75,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 76,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 77,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 78,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 79,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 80,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 81,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 82,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 83,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 84,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 85,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 86,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 87,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 88,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 89,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 90,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 91,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 92,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 93,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 94,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 95,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 96,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 97,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 98,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 99,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 100,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 101,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 102,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 103,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 104,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 105,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 106,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 107,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 108,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 109,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 110,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 111,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 112,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 113,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 114,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        },
+        {
+            "id": 115,
+            "type": "relay",
+            "tags": [],
+            "coords": "",
+            "channels": [
+                {
+                    "name": "brightness",
+                    "depth": 8
+                }
+            ]
+        }
+    ]
+}

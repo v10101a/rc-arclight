@@ -7,9 +7,13 @@ I'm not changing it; everything here talks to its HTTP API on port 8080.
 - `docs/arclamp-api.md` — how the server works, every endpoint, measured speeds, open questions.
 - `docs/controller-design.md` — what's wrong with the current system and the design for the new controller.
 - `docs/lights.json` — snapshot of the fixture inventory (`GET /v1/lights`), 2026-10-15.
+- `web/floorplan.js` — the Recurse floor plan, geometry by Aaron (see below).
+- `web/data/` — the light positions (`layout.json`, floor-plan units), the rows as groups (`map.json`),
+  Aaron's original `recurse-mapping.json`, presets and the MIDI map. The page saves here as you edit.
 - `tools/arclamp.py` — stdlib-only CLI: inspect the scene, reset it, set the roomtone, mute layers.
 - `tools/stream.py` — print the live output stream (needs `uv`).
 - `tools/serve.py` — serves `web/` and saves the page's layout/presets/MIDI map into `web/data/`.
+- `tools/recurse_map.py` — import Aaron's `mapping.json` into `web/data/`, or export ours back in his format.
 - `web/index.html` — the controller: floor plan, colour targets, looks with knobs, presets, Web MIDI. No build step, no dependencies.
 
 ## Quick start
@@ -55,6 +59,24 @@ some lights. Higher position is applied later and wins, and a layer that doesn't
 light leaves it alone. The debug page's "Send demo" button adds a new layer every press and
 never removes one, which is how the scene ends up with a dozen demos stacked and only the top
 one visible. `reset` clears them.
+
+## The map
+
+The floor plan and the light rows come from Aaron's
+[recurseLightMap](https://github.com/aaronw122/recurseLightMap): a phone-first editor he used on
+site to trace the space from the egress sign and assign numbers 1–55 to bulbs grouped into rows
+(Kitchen 1, Couches 2, Row 14C…). This page uses that frame and those rows directly:
+
+- positions and the plan are in his units (building 1000 × 520); scroll pans, pinch or ctrl+scroll
+  zooms, "fit" resets;
+- each row is a **group**: click its chip to select it, shift+click to add, and the row's order is
+  the "row by row" order for chase and wave;
+- dots are the live colour of each light with the row colour as a ring and the number inside.
+
+To take a newer map from Aaron: `python3 tools/recurse_map.py import path/to/mapping.json`. To hand
+him positions edited here: `python3 tools/recurse_map.py export mapping.json`. Bulb 55 is not in
+his file; it is placed from Viola's own mapping near the top wall by the WCs in a group called
+"Hall (check)" until someone confirms it with identify.
 
 ## Related
 

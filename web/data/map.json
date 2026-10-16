@@ -1,0 +1,226 @@
+{
+ "frame": "recurse-floor-v1",
+ "groups": [
+  {
+   "color": "#ff6b6b",
+   "ids": [],
+   "name": "Turing"
+  },
+  {
+   "color": "#ffd43b",
+   "ids": [],
+   "name": "Hopper"
+  },
+  {
+   "color": "#69db7c",
+   "ids": [],
+   "name": "Sammet"
+  },
+  {
+   "color": "#4dabf7",
+   "ids": [
+    50,
+    49
+   ],
+   "name": "Elevator lobby 1"
+  },
+  {
+   "color": "#da77f2",
+   "ids": [
+    47,
+    48,
+    46
+   ],
+   "name": "Elevator lobby 2"
+  },
+  {
+   "color": "#ff922b",
+   "ids": [
+    38,
+    39,
+    40
+   ],
+   "name": "Main 1"
+  },
+  {
+   "color": "#38d9a9",
+   "ids": [
+    37,
+    35,
+    36
+   ],
+   "name": "Main 2"
+  },
+  {
+   "color": "#f783ac",
+   "ids": [
+    18,
+    19,
+    20
+   ],
+   "name": "Main 3"
+  },
+  {
+   "color": "#a9e34b",
+   "ids": [
+    26,
+    25,
+    24
+   ],
+   "name": "Kitchen 1"
+  },
+  {
+   "color": "#748ffc",
+   "ids": [
+    30,
+    31,
+    32,
+    33
+   ],
+   "name": "Kitchen 2"
+  },
+  {
+   "color": "#e599f7",
+   "ids": [
+    29,
+    28,
+    34,
+    27
+   ],
+   "name": "Kitchen 3"
+  },
+  {
+   "color": "#66d9e8",
+   "ids": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "name": "Couches 1"
+  },
+  {
+   "color": "#ff6b6b",
+   "ids": [
+    10,
+    9,
+    8,
+    7,
+    6
+   ],
+   "name": "Couches 2"
+  },
+  {
+   "color": "#ffd43b",
+   "ids": [
+    13,
+    12,
+    11
+   ],
+   "name": "Couches 3"
+  },
+  {
+   "color": "#69db7c",
+   "ids": [
+    53,
+    52,
+    51
+   ],
+   "name": "Row 14A"
+  },
+  {
+   "color": "#4dabf7",
+   "ids": [
+    41,
+    42,
+    43
+   ],
+   "name": "Row 14B"
+  },
+  {
+   "color": "#da77f2",
+   "ids": [
+    21,
+    22,
+    23
+   ],
+   "name": "Row 14C"
+  },
+  {
+   "color": "#ff922b",
+   "ids": [
+    17,
+    54,
+    16
+   ],
+   "name": "Row 14D"
+  },
+  {
+   "color": "#38d9a9",
+   "ids": [
+    15,
+    14
+   ],
+   "name": "Row 14E"
+  },
+  {
+   "color": "#f783ac",
+   "ids": [
+    45,
+    44
+   ],
+   "name": "Row 15"
+  },
+  {
+   "color": "#a9e34b",
+   "ids": [
+    55
+   ],
+   "name": "Hall (check)"
+  }
+ ],
+ "source": "recurse-mapping.json",
+ "unnumbered": [
+  {
+   "group": "Turing",
+   "x": 60,
+   "y": 91
+  },
+  {
+   "group": "Turing",
+   "x": 60,
+   "y": 188.5
+  },
+  {
+   "group": "Hopper",
+   "x": 70,
+   "y": 331.5
+  },
+  {
+   "group": "Hopper",
+   "x": 70,
+   "y": 396.5
+  },
+  {
+   "group": "Hopper",
+   "x": 70,
+   "y": 461.5
+  },
+  {
+   "group": "Sammet",
+   "x": 180,
+   "y": 455
+  },
+  {
+   "group": "Sammet",
+   "x": 216,
+   "y": 455
+  },
+  {
+   "group": "Sammet",
+   "x": 252,
+   "y": 455
+  }
+ ]
+}
