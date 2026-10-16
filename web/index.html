@@ -44,6 +44,11 @@
   .layers .muted .n { opacity:.45; text-decoration:line-through; }
   .layers button { padding:1px 6px; font-size:11px; }
   .hint { color:var(--mut); font-size:11px; }
+  .learn, .midi-only, .others, #relayRow { display:none; }
+  body.midi-on .learn { display:inline-block; } body.midi-on .midi-only { display:block; }
+  body.show-others .others { display:inline-block; } body.relays-selected #relayRow { display:flex; }
+  details.fold summary { cursor:pointer; list-style:none; } details.fold summary::-webkit-details-marker { display:none; }
+  details.fold summary::before { content:"▸ "; color:var(--mut); } details.fold[open] summary::before { content:"▾ "; }
   .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:var(--warn); }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; height:auto; } #plan canvas { height:70vh; flex:none; } aside { border-left:none; border-top:1px solid var(--line); } }
 </style>
@@ -51,79 +56,75 @@
 <body>
 <header>
   <h1>arclight</h1>
-  <input id="srv" type="text" size="26" title="API server">
-  <input id="tok" type="password" size="20" placeholder="token" title="API token: the Token field on debug.html">
+  <input id="srv" type="text" size="24" title="API server">
+  <input id="tok" type="password" size="16" placeholder="token" title="API token: the Token field on debug.html">
   <button id="connect">connect</button>
   <span id="status" class="hint">not connected</span>
   <div class="health">
-    <span>stream <b id="hFps">–</b> fps</span>
+    <span><b id="hFps">–</b> fps</span>
     <span>write <b id="hLat">–</b> ms</span>
-    <span>queue <b id="hQ">0</b></span>
     <span>layers <b id="hLayers">–</b></span>
     <span>engine <b id="hEngine">none</b></span>
+    <button id="saveAll" title="save layout, presets and midi map into web/data/ (also happens automatically)">save</button>
   </div>
 </header>
 <main>
   <div id="plan">
     <div class="row">
-      <button id="selAll">all</button><button id="selBulbs">bulbs 1–55</button><button id="sel4x1">4x1 56–63</button><button id="selRelays">relays 64–115</button><button id="selNone">none</button><button id="selInv">invert</button>
-      <button id="showOthers" title="also plot the 4x1s and relays (56–115)">show 56–115</button>
-      <span class="hint" id="selInfo">0 selected</span>
+      <button id="selAll">all</button><button id="selNone">none</button><button id="selInv">invert</button>
+      <button id="sel4x1" class="others">4x1</button><button id="selRelays" class="others">relays</button>
+      <span class="hint" id="selInfo"></span>
       <span style="flex:1"></span>
-      <button id="editLayout">edit layout</button><button id="exportLayout">export</button><button id="importLayout">import</button><button id="defaultLayout">default</button>
+      <button id="showOthers" title="also plot the 4x1s and relays">56–115</button>
+      <button id="editLayout">edit layout</button>
+      <button id="layoutMore" title="export / import / default layout">⋯</button>
+      <span id="layoutMenu" hidden><button id="exportLayout">export</button><button id="importLayout">import</button><button id="defaultLayout">default</button></span>
     </div>
     <canvas id="cv"></canvas>
     <div class="row" id="mapBar">
-      <span class="hint">identify</span>
-      <button id="idStart" title="light one light at a time, white, so you can see which dot is which">start sequence</button>
-      <button id="idPause" disabled>pause</button>
-      <button id="idPrev" disabled title="previous (←)">◀</button>
-      <button id="idNext" disabled title="next (→)">▶</button>
-      <button id="idStop" class="danger" disabled>stop</button>
-      <label class="hint">speed <input type="range" id="idSpeed" min="100" max="3000" step="50" style="width:120px;vertical-align:middle;accent-color:var(--acc)"> <span id="idSpeedV" class="warn"></span> ms</label>
+      <span class="hint" title="lights one light at a time so you can see which dot is which">identify</span>
+      <button id="idStart">start</button><button id="idPause" disabled>pause</button><button id="idPrev" disabled title="← key">◀</button><button id="idNext" disabled title="→ key">▶</button><button id="idStop" class="danger" disabled>stop</button>
+      <input type="range" id="idSpeed" min="100" max="3000" step="50" style="width:110px;accent-color:var(--acc)" title="ms per light"><span id="idSpeedV" class="warn"></span>
       <span id="idNow" class="warn"></span>
+      <span style="flex:1"></span>
+      <span class="hint">click select · shift add · drag box · edit layout: drag dots</span>
     </div>
-    <div class="hint">click = select · shift+click = add · drag = box select · "edit layout": drag a dot to move it, drag a selected dot to move the whole selection. Dots show the live output of the whole layer stack.<br>
-    identify steps through the selection if there is one, otherwise bulbs 1–55. While it runs: click a dot to hold that light on, ← → step, space pauses. Stopping deletes its layer; the roomtone is never touched.</div>
   </div>
   <aside>
     <section>
-      <h2>Room</h2>
       <div class="row">
-        <button id="ownRoom" title="mute every layer that isn't the engine, so the room shows your targets">own the room</button><button class="learn" data-learn="own">midi</button>
-        <button id="releaseRoom" title="unmute the layers you muted">release</button>
-        <button id="blackout" class="danger" title="own the room and write 0 to every light">blackout</button><button class="learn" data-learn="blackout">midi</button>
-        <button id="resetScene" class="danger" title="delete every layer except the engine">reset scene</button>
+        <button id="ownRoom" title="mute everyone else's layers so the room shows yours">own room</button><button class="learn" data-learn="own">midi</button>
+        <button id="releaseRoom" title="unmute them again">release</button>
+        <button id="blackout" class="danger" title="own the room and set every light to 0 (click twice)">blackout</button><button class="learn" data-learn="blackout">midi</button>
+        <button id="resetScene" class="danger" title="delete every layer that isn't ours (click twice)">reset</button>
       </div>
     </section>
     <section>
-      <h2>Colour of selection <span class="hint" id="colInfo"></span></h2>
+      <h2>colour <span class="hint" id="colInfo"></span></h2>
       <div id="colour"></div>
-      <div class="row"><button id="relayOn">relays on</button><button id="relayOff">relays off</button><span class="hint">relays are switches</span></div>
+      <div class="row" id="relayRow"><button id="relayOn">relays on</button><button id="relayOff">relays off</button></div>
     </section>
     <section>
-      <h2>Look <span class="hint">runs on the Pi, modulates the colour above</span></h2>
-      <div class="row"><select id="look"></select><button class="learn" data-learn="look">midi</button><button id="applyLook">apply to selection</button><button id="lookAll">all bulbs</button></div>
+      <h2>look</h2>
+      <div class="row"><select id="look"></select><button class="learn" data-learn="look">midi</button><button id="applyLook" title="run the look on the selected lights">to selection</button><button id="lookAll">all bulbs</button></div>
       <div id="params"></div>
-      <div class="slider"><label>fade</label><input type="range" id="fade" min="0" max="4000" step="50"><span class="v" id="fadeV"></span><button class="learn" data-learn="fade">midi</button></div>
-      <div class="slider"><label>smooth</label><input type="range" id="tau" min="0" max="2000" step="10"><span class="v" id="tauV"></span><button class="learn" data-learn="tau">midi</button></div>
-      <div class="hint" id="engineInfo">engine: none</div>
+      <details class="fold"><summary class="hint">timing</summary>
+        <div class="slider"><label>fade</label><input type="range" id="fade" min="0" max="4000" step="50"><span class="v" id="fadeV"></span><button class="learn" data-learn="fade">midi</button></div>
+        <div class="slider"><label>smooth</label><input type="range" id="tau" min="0" max="2000" step="10"><span class="v" id="tauV"></span><button class="learn" data-learn="tau">midi</button></div>
+      </details>
+      <div class="hint bad" id="engineInfo"></div>
     </section>
     <section>
-      <h2>Presets</h2>
+      <h2>presets <span class="hint">shift+click saves · alt+click clears</span></h2>
       <div class="pads" id="pads"></div>
-      <div class="hint">click = recall · shift+click = save · alt+click = clear. Arm a pad's midi via shift+alt+click.</div>
-      <div class="row"><button id="exportPresets">export</button><button id="importPresets">import</button></div>
     </section>
     <section>
-      <h2>MIDI</h2>
-      <div class="row"><button id="midiEnable">enable midi</button><span class="hint" id="midiInfo">off</span></div>
-      <div class="hint">arm a "midi" button next to a control, then turn a knob or hit a pad. Last message: <span id="midiLast">–</span></div>
-      <div class="row"><button id="clearMidi">clear map</button></div>
+      <h2>midi</h2>
+      <div class="row"><button id="midiEnable">enable</button><span class="hint" id="midiInfo"></span><button id="clearMidi" class="learn">clear map</button></div>
+      <div class="hint midi-only">click a <b>midi</b> button, then move a knob or hit a pad · last: <span id="midiLast">–</span></div>
     </section>
     <section>
-      <h2>Layers <span class="hint">highest wins; engine should be on top</span></h2>
-      <div class="layers" id="layers"></div>
+      <details class="fold"><summary class="hint">layers <span id="layerCount"></span></summary><div class="layers" id="layers"></div></details>
     </section>
   </aside>
 </main>
@@ -271,7 +272,10 @@ async function connect() {
     S.ids = Object.keys(S.lights).map(Number).sort((a, b) => a - b);
     S.targets = {}; const tl = (room.template && room.template.lights) || {};
     for (const k in tl) S.targets[+k] = Object.assign({}, tl[k]);
-    S.layout = LS.get("layout", null) || defaultLayout();
+    S.layout = LS.get("layout", null) || (await loadData("layout")) || defaultLayout();
+    if (S.presets.every((p) => !p)) { const f = await loadData("presets"); if (Array.isArray(f)) { S.presets = f; LS.set("presets", f); renderPads(); } }
+    if (!Object.keys(S.midimap).length) { const f = await loadData("midimap"); if (f && typeof f === "object") { S.midimap = f; LS.set("midimap", f); } }
+    autosave();
     S.scene = scene; S.engine = findEngine(scene);
     if (S.engine) {
       const m = (S.engine.script || "").match(/^var NEW = (.*);$/m);
@@ -306,7 +310,6 @@ function updateHealth() {
   $("hFps").className = S.fps < 15 && S.ws ? "warn" : "";
   $("hLat").textContent = Q.lastLat ? Math.round(Q.lastLat) : "–";
   $("hLat").className = Q.lastLat > 300 ? "warn" : "";
-  $("hQ").textContent = Object.keys(Q.pending).length + (Q.inflight ? 1 : 0) + (Q.engineDirty ? 1 : 0);
   $("hLayers").textContent = S.scene.length ? S.scene.length - 1 : "–";
   const e = S.engine && S.scene.find((d) => d.id === S.engine.id);
   $("hEngine").textContent = e ? e.state + (e.muted ? " (muted)" : "") : "none";
@@ -341,7 +344,8 @@ function renderScene() {
     box.appendChild(row);
   });
   const e = S.engine && S.scene.find((d) => d.id === S.engine.id);
-  $("engineInfo").textContent = e ? `engine #${e.id} ${e.state}, respawns ${e.respawns}, position ${e.position}${top && top.id !== e.id ? " — NOT on top, something is covering it" : ""}` : "engine: none";
+  $("engineInfo").textContent = !e ? "" : top && top.id !== e.id ? "engine is not on top: another layer is covering it (open layers)" : e.state !== "running" ? "engine " + e.state : "";
+  $("layerCount").textContent = S.scene.length ? "(" + (S.scene.length - 1) + ")" : "";
 }
 function foreignLayers() { return S.scene.filter((d) => d.id !== 0 && !(S.engine && d.id === S.engine.id) && !(d.script || "").startsWith(ID_TAG)); }
 async function ownRoom() {
@@ -405,7 +409,7 @@ function draw() {
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = lightColor(S.frame[id] || {}); ctx.fill();
     ctx.lineWidth = 1 * dpr; ctx.strokeStyle = "#2c313b"; ctx.stroke();
     if (S.selection.has(id)) { ctx.beginPath(); ctx.arc(x, y, r + 3 * dpr, 0, Math.PI * 2); ctx.lineWidth = 2 * dpr; ctx.strokeStyle = "#6aa2ff"; ctx.stroke(); }
-    ctx.fillStyle = "#8a93a3"; ctx.fillText(id, x, y + r + 10 * dpr);
+    if (S.editLayout || M.layer || S.selection.has(id)) { ctx.fillStyle = "#8a93a3"; ctx.fillText(id, x, y + r + 10 * dpr); }
   }
   if (M.layer) {
     const lit = M.fixed !== null ? M.fixed : litId();
@@ -441,7 +445,7 @@ cv.addEventListener("pointermove", (ev) => {
 });
 cv.addEventListener("pointerup", () => {
   if (!drag) return;
-  if (drag.move) { if (drag.moved) LS.set("layout", S.layout); else if (M.layer) identifyFix(drag.move); }
+  if (drag.move) { if (drag.moved) { LS.set("layout", S.layout); autosave(); } else if (M.layer) identifyFix(drag.move); }
   else if (drag.box) {
     const x0 = Math.min(drag.x0, drag.x1), x1 = Math.max(drag.x0, drag.x1), y0 = Math.min(drag.y0, drag.y1), y1 = Math.max(drag.y0, drag.y1);
     if (!drag.add) S.selection.clear();
@@ -451,19 +455,20 @@ cv.addEventListener("pointerup", () => {
 });
 function select(pred) { S.selection = new Set(S.ids.filter(pred)); updateSelInfo(); needDraw = true; }
 $("selAll").onclick = () => { const p = new Set(plotted()); select((id) => p.has(id)); };
-$("selBulbs").onclick = () => select((id) => S.lights[id].type === "br30");
 $("sel4x1").onclick = () => select((id) => S.lights[id].type === "4x1");
 $("selRelays").onclick = () => select((id) => S.lights[id].type === "relay");
 $("selNone").onclick = () => select(() => false);
 $("selInv").onclick = () => { const old = S.selection, p = new Set(plotted()); select((id) => p.has(id) && !old.has(id)); };
-$("showOthers").onclick = () => { S.showOthers = !S.showOthers; LS.set("showOthers", S.showOthers); $("showOthers").classList.toggle("on", S.showOthers); needDraw = true; };
+$("showOthers").onclick = () => { S.showOthers = !S.showOthers; LS.set("showOthers", S.showOthers); $("showOthers").classList.toggle("on", S.showOthers); document.body.classList.toggle("show-others", S.showOthers); needDraw = true; };
+$("layoutMore").onclick = () => { $("layoutMenu").hidden = !$("layoutMenu").hidden; };
 $("editLayout").onclick = () => { S.editLayout = !S.editLayout; $("editLayout").classList.toggle("on", S.editLayout); cv.classList.toggle("edit", S.editLayout); };
-$("defaultLayout").onclick = () => { S.layout = defaultLayout(); LS.set("layout", S.layout); needDraw = true; };
+$("defaultLayout").onclick = () => { S.layout = defaultLayout(); LS.set("layout", S.layout); autosave(); needDraw = true; };
 $("exportLayout").onclick = () => download("arclight-layout.json", S.layout);
-$("importLayout").onclick = () => pickFile((o) => { S.layout = o; LS.set("layout", o); needDraw = true; });
+$("importLayout").onclick = () => pickFile((o) => { S.layout = o; LS.set("layout", o); autosave(); needDraw = true; });
 function updateSelInfo() {
   const sel = [...S.selection];
-  $("selInfo").textContent = sel.length + " selected" + (sel.length ? " (" + sel.slice(0, 12).join(",") + (sel.length > 12 ? ",…" : "") + ")" : "");
+  $("selInfo").textContent = sel.length ? sel.length + " selected" : "";
+  document.body.classList.toggle("relays-selected", sel.some((id) => S.lights[id] && S.lights[id].type === "relay"));
   renderColour();
 }
 
@@ -539,12 +544,12 @@ function renderPads() {
   S.presets.forEach((p, i) => {
     const b = document.createElement("button"); b.textContent = (i + 1) + (p ? " " + (p.look.name) : " –"); if (p) b.className = "full";
     b.title = p ? `look ${p.look.name}, saved ${p.at}` : "empty";
-    b.onclick = (ev) => { if (ev.shiftKey && ev.altKey) { arm("preset:" + i, b); return; } if (ev.altKey) { S.presets[i] = null; } else if (ev.shiftKey) savePreset(i); else recallPreset(i); LS.set("presets", S.presets); renderPads(); };
+    b.onclick = (ev) => { if (ev.shiftKey && ev.altKey) { arm("preset:" + i, b); return; } if (ev.altKey) { S.presets[i] = null; autosave(); } else if (ev.shiftKey) savePreset(i); else recallPreset(i); LS.set("presets", S.presets); renderPads(); };
     box.appendChild(b);
   });
 }
 async function savePreset(i) {
-  try { const room = await api("GET", "/v1/shader/0"); S.presets[i] = { at: new Date().toLocaleString(), targets: room.template.lights, look: JSON.parse(JSON.stringify(S.look)), tau: S.tau, fade: S.fade }; LS.set("presets", S.presets); renderPads(); setStatus("saved preset " + (i + 1), "ok"); }
+  try { const room = await api("GET", "/v1/shader/0"); S.presets[i] = { at: new Date().toLocaleString(), targets: room.template.lights, look: JSON.parse(JSON.stringify(S.look)), tau: S.tau, fade: S.fade }; LS.set("presets", S.presets); autosave(); renderPads(); setStatus("saved preset " + (i + 1), "ok"); }
   catch (e) { setStatus(e.message, "bad"); }
 }
 function recallPreset(i) {
@@ -554,8 +559,6 @@ function recallPreset(i) {
   S.look = JSON.parse(JSON.stringify(p.look)); S.tau = p.tau; S.fade = p.fade; renderLook(); requestEngine(); renderColour();
   setStatus("recalled preset " + (i + 1), "ok");
 }
-$("exportPresets").onclick = () => download("arclight-presets.json", S.presets);
-$("importPresets").onclick = () => pickFile((o) => { if (Array.isArray(o)) { S.presets = o; LS.set("presets", o); renderPads(); } });
 
 // ---------- MIDI ----------
 function arm(target, btnEl) {
@@ -579,7 +582,7 @@ async function enableMidi() {
   try {
     const acc = await navigator.requestMIDIAccess();
     const hook = () => { let n = 0; acc.inputs.forEach((inp) => { inp.onmidimessage = onMidi; n++; }); $("midiInfo").textContent = n + " input(s)"; };
-    hook(); acc.onstatechange = hook; $("midiEnable").classList.add("on");
+    hook(); acc.onstatechange = hook; $("midiEnable").classList.add("on"); document.body.classList.add("midi-on");
   } catch (e) { $("midiInfo").textContent = "denied: " + e.message; }
 }
 const noteState = {};
@@ -591,7 +594,7 @@ function onMidi(ev) {
   else if (type === 0x80 || (type === 0x90 && d2 === 0)) { return; }
   else return;
   $("midiLast").textContent = key + " " + d2;
-  if (S.learn) { S.midimap[key] = S.learn; LS.set("midimap", S.midimap); S.learn = null; document.querySelectorAll(".learn").forEach(markBound); renderPads(); setStatus("bound " + key, "ok"); return; }
+  if (S.learn) { S.midimap[key] = S.learn; LS.set("midimap", S.midimap); autosave(); S.learn = null; document.querySelectorAll(".learn").forEach(markBound); renderPads(); setStatus("bound " + key, "ok"); return; }
   const target = S.midimap[key]; if (!target) return;
   if (!isTrigger) { const was = noteState[key] || 0; noteState[key] = val; isTrigger = val > 0.5 && was <= 0.5; }
   applyControl(target, val, isTrigger);
@@ -609,7 +612,7 @@ function applyControl(target, val, trig) {
   else if (kind === "blackout") { if (trig) blackout(); }
 }
 $("midiEnable").onclick = enableMidi;
-$("clearMidi").onclick = () => { S.midimap = {}; LS.set("midimap", {}); document.querySelectorAll(".learn").forEach(markBound); };
+$("clearMidi").onclick = () => { S.midimap = {}; LS.set("midimap", {}); autosave(); document.querySelectorAll(".learn").forEach(markBound); };
 
 // ---------- room buttons (two-click confirm for destructive ones) ----------
 function twoClick(el, fn) { let armed = null; el.onclick = () => { if (armed) { clearTimeout(armed); armed = null; el.classList.remove("confirm"); fn(); } else { el.classList.add("confirm"); armed = setTimeout(() => { armed = null; el.classList.remove("confirm"); }, 3000); } }; }
@@ -684,6 +687,17 @@ window.addEventListener("keydown", (ev) => {
   else if (ev.key === " ") { identifyPause(); ev.preventDefault(); }
 });
 
+// ---------- saving into the repo (web/data/*.json via tools/serve.py) ----------
+async function saveData(name, obj) { try { const r = await fetch("data/" + name + ".json", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(obj) }); return r.ok; } catch (e) { return false; } }
+async function loadData(name) { try { const r = await fetch("data/" + name + ".json", { cache: "no-store" }); return r.ok ? await r.json() : null; } catch (e) { return null; } }
+let saveTimer = null;
+function autosave() { clearTimeout(saveTimer); saveTimer = setTimeout(() => saveAll(false), 800); }
+async function saveAll(loud) {
+  const ok = (await saveData("layout", S.layout)) && (await saveData("presets", S.presets)) && (await saveData("midimap", S.midimap));
+  if (loud || !ok) setStatus(ok ? "saved to web/data/" : "not saved: run tools/serve.py (or use ⋯ export)", ok ? "ok" : "warn");
+}
+$("saveAll").onclick = () => saveAll(true);
+
 // ---------- misc ----------
 function btn(label, fn) { const b = document.createElement("button"); b.textContent = label; b.onclick = (ev) => { ev.stopPropagation(); fn().catch((e) => setStatus(e.message, "bad")); }; return b; }
 function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
@@ -696,7 +710,7 @@ function pickFile(cb) { const f = $("filePick"); f.onchange = () => { const r = 
   $("srv").value = q.get("server") || LS.get("srv", null) || "http://arclight.local:8080";
   $("tok").value = q.get("token") || LS.get("tok", "");
   $("connect").onclick = connect;
-  resize(); renderLook(); renderPads(); renderColour(); renderIdentify(); $("showOthers").classList.toggle("on", S.showOthers);
+  resize(); renderLook(); renderPads(); renderColour(); renderIdentify(); $("showOthers").classList.toggle("on", S.showOthers); document.body.classList.toggle("show-others", S.showOthers);
   bindLearnButtons(document.querySelector("aside"));
   if ($("tok").value) connect();
 })();

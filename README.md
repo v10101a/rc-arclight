@@ -9,6 +9,7 @@ I'm not changing it; everything here talks to its HTTP API on port 8080.
 - `docs/lights.json` — snapshot of the fixture inventory (`GET /v1/lights`), 2026-10-15.
 - `tools/arclamp.py` — stdlib-only CLI: inspect the scene, reset it, set the roomtone, mute layers.
 - `tools/stream.py` — print the live output stream (needs `uv`).
+- `tools/serve.py` — serves `web/` and saves the page's layout/presets/MIDI map into `web/data/`.
 - `web/index.html` — the controller: floor plan, colour targets, looks with knobs, presets, Web MIDI. No build step, no dependencies.
 
 ## Quick start
@@ -30,12 +31,15 @@ overrides the default `http://arclight.local:8080`.
 ## The controller
 
 ```sh
-python3 -m http.server 8787 --bind 127.0.0.1 --directory web
+python3 tools/serve.py
 open http://127.0.0.1:8787/
 ```
 
-Paste the token once (it's remembered in the browser). Serve it from `localhost` like this rather
-than from the Pi: Chrome only gives a page Web MIDI in a secure context, and `localhost` counts.
+Paste the token once (it's remembered in the browser). `tools/serve.py` is a static server plus
+one POST route the page uses to save the light layout, presets and MIDI map into `web/data/`
+(automatically, after every change), so that work lives in the repo and not only in the browser.
+Serve from `localhost` rather than from the Pi: Chrome only gives a page Web MIDI in a secure
+context, and `localhost` counts.
 
 How it drives the lights, in one breath: colour controls write **targets** into the roomtone
 (fast, ~85 ms); one generated **engine layer** on the Pi eases every light toward its target and
