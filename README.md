@@ -76,7 +76,7 @@ site to trace the space from the egress sign and assign numbers 1–55 to bulbs 
 To take a newer map from Aaron: `python3 tools/recurse_map.py import path/to/mapping.json`. To hand
 him positions edited here: `python3 tools/recurse_map.py export mapping.json`. Bulb 55 is not in
 his file; it is placed from Viola's own mapping near the top wall by the WCs in a group called
-"Hall (check)" until someone confirms it with identify.
+"Hall (check)" until someone checks where it really is.
 
 ## Related
 

@@ -103,14 +103,7 @@
       <span id="layoutMenu" hidden><button id="exportLayout">Export</button><button id="importLayout">Import</button></span>
     </div>
     <canvas id="cv"></canvas>
-    <div class="row" id="mapBar">
-      <span class="hint" title="Lights one light at a time so you can see which dot is which">Identify</span>
-      <button id="idStart">Start</button><button id="idPause" disabled>Pause</button><button id="idPrev" disabled title="← key">◀</button><button id="idNext" disabled title="→ key">▶</button><button id="idStop" class="danger" disabled>Stop</button>
-      <input type="range" id="idSpeed" min="100" max="3000" step="50" style="width:110px;accent-color:var(--accent)" title="ms per light"><span id="idSpeedV" class="hint"></span>
-      <span id="idNow" class="warn"></span>
-      <span style="flex:1"></span>
-      <span class="hint">Click selects, shift adds, drag draws a box.</span>
-    </div>
+    <div class="row"><span class="hint">Click selects, shift adds, drag draws a box.</span></div>
   </div>
   <aside>
     <section>
@@ -358,9 +351,6 @@ async function connect() {
       S.prevLook = JSON.parse(JSON.stringify(S.look));
       renderLook();
     } else { S.prevLook = null; await uploadEngine(); }
-    const idl = findIdentify(scene);
-    if (idl.length) { M.layer = idl[0]; const m = idl[0].script.match(/^var IDS = (\[.*?\]), PERIOD = (\d+), FIXED = (null|\d+);$/m); if (m) { M.ids = JSON.parse(m[1]); M.period = +m[2]; M.fixed = m[3] === "null" ? null : +m[3]; } }
-    renderIdentify();
     openStream(); renderScene(); renderColour(); updateSelInfo(); draw();
     setStatus("Connected" + (S.via ? " via " + S.base.replace(/^https?:\/\//, "") : "") + " at " + new Date().toLocaleTimeString(), "ok");
   } catch (e) { setStatus(e.message + (S.via ? "" : " (is arclight.local resolving? try its IP in the server box)"), "bad"); }
@@ -400,19 +390,16 @@ async function refreshScene() {
   try { S.scene = await api("GET", "/v1/scene"); } catch (e) { return; }
   const eng = findEngine(S.scene);
   if (eng) S.engine = eng; else if (S.engine) { S.engine = null; }
-  const idl = findIdentify(S.scene);
-  if (M.layer && !idl.find((d) => d.id === M.layer.id)) { M.layer = null; M.fixed = null; renderIdentify(); }
   renderScene(); updateHealth();
 }
 function note(d) { const s = (d.script || "").split("\n"); for (let i = 0; i < Math.min(4, s.length); i++) { const t = s[i].trim(); if (t.startsWith("//")) return t.slice(2).trim(); } return s[0] ? s[0].slice(0, 60) : ""; }
 function renderScene() {
   const box = $("layers"); box.innerHTML = "";
-  const top = [...S.scene].reverse().find((d) => !(d.script || "").startsWith(ID_TAG)) || null;
+  const top = S.scene.length ? S.scene[S.scene.length - 1] : null;
   [...S.scene].reverse().forEach((d) => {
     const row = document.createElement("div"); if (d.muted) row.className = "muted";
     const isEngine = S.engine && d.id === S.engine.id;
-    const isIdent = (d.script || "").startsWith(ID_TAG);
-    const label = d.id === 0 ? "roomtone (targets)" : isEngine ? "engine (ours)" : isIdent ? "identify sequence (ours)" : note(d);
+    const label = d.id === 0 ? "roomtone (targets)" : isEngine ? "engine (ours)" : note(d);
     row.innerHTML = `<span style="width:22px;color:var(--mut)">${d.position}</span><span class="n" title="${esc(d.script || "")}">#${d.id} ${esc(label)}</span>`;
     if (d.id !== 0) {
       row.appendChild(btn(d.muted ? "unmute" : "mute", async () => { await api("POST", `/v1/shader/${d.id}/muted`, { muted: !d.muted }); refreshScene(); }));
@@ -427,7 +414,7 @@ function renderScene() {
   $("engineInfo").textContent = !e ? "" : top && top.id !== e.id ? "engine is not on top: another layer is covering it (open layers)" : e.state !== "running" ? "engine " + e.state : "";
   $("layerCount").textContent = S.scene.length ? "(" + (S.scene.length - 1) + ")" : "";
 }
-function foreignLayers() { return S.scene.filter((d) => d.id !== 0 && !(S.engine && d.id === S.engine.id) && !(d.script || "").startsWith(ID_TAG)); }
+function foreignLayers() { return S.scene.filter((d) => d.id !== 0 && !(S.engine && d.id === S.engine.id)); }
 async function ownRoom() {
   const victims = foreignLayers().filter((d) => !d.muted);
   for (const d of victims) { try { await api("POST", `/v1/shader/${d.id}/muted`, { muted: true }); S.mutedByUs.push(d.id); } catch (e) {} }
@@ -569,14 +556,8 @@ function draw() {
     if (r >= 8 * dpr) {
       ctx.font = `800 ${Math.round(r * 0.95)}px ${"ui-rounded, system-ui, sans-serif"}`; ctx.textBaseline = "middle";
       ctx.fillStyle = lum > 120 ? "rgba(20,18,26,.9)" : "rgba(240,238,245,.9)"; ctx.fillText(id, x, y + 0.5 * dpr); ctx.textBaseline = "alphabetic";
-    } else if (S.editLayout || M.layer || S.selection.has(id)) { ctx.font = `${9 * dpr}px ui-rounded, system-ui, sans-serif`; ctx.fillStyle = "#8a93a3"; ctx.fillText(id, x, y + r + 10 * dpr); }
+    } else if (S.editLayout || S.selection.has(id)) { ctx.font = `${9 * dpr}px ui-rounded, system-ui, sans-serif`; ctx.fillStyle = "#8a93a3"; ctx.fillText(id, x, y + r + 10 * dpr); }
   }
-  if (M.layer) {
-    const lit = M.fixed !== null ? M.fixed : litId();
-    if (lit !== null) { const [x, y] = pos(lit); ctx.beginPath(); ctx.arc(x, y, radius(lit) + 7 * dpr, 0, Math.PI * 2); ctx.lineWidth = 2 * dpr; ctx.strokeStyle = "#F5C542"; ctx.stroke(); }
-    if (lit !== M.lastLit) { M.lastLit = lit; $("idNow").textContent = lit !== null ? `now: #${lit}${M.fixed !== null ? " (held)" : ""}` : ""; }
-  }
-  if (drag && drag.box) { ctx.strokeStyle = "#6aa2ff"; ctx.lineWidth = 1 * dpr; ctx.setLineDash([4 * dpr, 3 * dpr]); ctx.strokeRect(drag.x0, drag.y0, drag.x1 - drag.x0, drag.y1 - drag.y0); ctx.setLineDash([]); }
 }
 (function loop() { if (needDraw && S.ids.length) draw(); requestAnimationFrame(loop); })();
 function canvasXY(ev) { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) * cv.width / r.width, (ev.clientY - r.top) * cv.height / r.height]; }
@@ -598,7 +579,6 @@ cv.addEventListener("pointerdown", (ev) => {
     if (!S.selection.has(id)) { if (!ev.shiftKey) S.selection.clear(); S.selection.add(id); updateSelInfo(); }
     drag = { move: id, ids: [...S.selection], lastX: x, lastY: y, moved: false, snap: JSON.stringify(S.layout) }; needDraw = true; return;
   }
-  if (M.layer && id !== null && !ev.shiftKey) { identifyFix(id); S.selection = new Set([id]); updateSelInfo(); needDraw = true; drag = { clickOnly: true }; return; }
   if (id !== null) { if (!ev.shiftKey) S.selection.clear(); if (S.selection.has(id) && ev.shiftKey) S.selection.delete(id); else S.selection.add(id); drag = { clickOnly: true }; }
   else drag = { box: true, x0: x, y0: y, x1: x, y1: y, add: ev.shiftKey };
   updateSelInfo(); needDraw = true;
@@ -617,7 +597,7 @@ cv.addEventListener("pointermove", (ev) => {
 cv.addEventListener("pointerup", () => {
   if (!drag) return;
   if (drag.pan) { drag = null; return; }
-  if (drag.move) { if (drag.moved) { layoutUndo = drag.snap; saveLayout(); autosave(); reflowLook(); } else if (M.layer) identifyFix(drag.move); }
+  if (drag.move && drag.moved) { layoutUndo = drag.snap; saveLayout(); autosave(); reflowLook(); }
   else if (drag.box) {
     const x0 = Math.min(drag.x0, drag.x1), x1 = Math.max(drag.x0, drag.x1), y0 = Math.min(drag.y0, drag.y1), y1 = Math.max(drag.y0, drag.y1);
     if (!drag.add) S.selection.clear();
@@ -833,72 +813,6 @@ $("solo").onclick = toggleSolo;
 twoClick($("blackout"), blackout);
 twoClick($("resetScene"), resetScene);
 
-// ---------- identify / mapping sequence: its own layer on top, never touches the roomtone ----------
-const ID_TAG = "// arclight-identify v1";
-const M = { layer: null, fixed: null, period: LS.get("idPeriod", 500), ids: [], timer: null, lastLit: null };
-function identifyScript() {
-  const ch = {}; M.ids.forEach((id) => { ch[id] = S.lights[id].channels.map((c) => c.name); });
-  return `${ID_TAG}
-// generated by arclight web/index.html: lights one of IDS at a time (white) so the dots can be mapped
-var IDS = ${JSON.stringify(M.ids)}, PERIOD = ${M.period}, FIXED = ${M.fixed === null ? "null" : M.fixed};
-var CH = ${JSON.stringify(ch)};
-function update(prev, curr, init) {
-  var on = FIXED !== null ? FIXED : IDS[Math.floor(curr / PERIOD) % IDS.length];
-  var out = [];
-  for (var i = 0; i < IDS.length; i++) {
-    var id = IDS[i], chans = CH[id], c = {};
-    var hasWhite = chans.indexOf("cold") >= 0 || chans.indexOf("warm") >= 0 || chans.indexOf("brightness") >= 0;
-    for (var j = 0; j < chans.length; j++) { var n = chans[j]; c[n] = (id === on && (!hasWhite || n === "cold" || n === "warm" || n === "brightness")) ? 255 : 0; }
-    out.push({ id: id, channels: c });
-  }
-  return { lights: out };
-}`;
-}
-function findIdentify(scene) { return scene.filter((d) => d.id !== 0 && (d.script || "").startsWith(ID_TAG)); }
-async function identifyUpload() {
-  const script = identifyScript();
-  try {
-    if (M.layer) await api("PUT", "/v1/shader/" + M.layer.id, { script });
-    else M.layer = await api("POST", "/v1/scene/shader", { type: "js", script, position: "bottom" });
-  } catch (e) { setStatus("identify failed: " + e.message, "bad"); }
-  renderIdentify(); refreshScene();
-}
-function identifyStart() {
-  if (!S.ids.length) { setStatus("connect first", "warn"); return; }
-  const sel = [...S.selection].sort((a, b) => a - b);
-  M.ids = sel.length ? sel : S.ids.filter((id) => S.lights[id].type === "br30");
-  M.fixed = null; identifyUpload();
-  setStatus(`identify: stepping through ${M.ids.length} light(s), ${M.period} ms each`, "ok");
-}
-async function identifyStop() {
-  const layers = findIdentify(S.scene); if (M.layer && !layers.find((d) => d.id === M.layer.id)) layers.push(M.layer);
-  for (const d of layers) { try { await api("DELETE", "/v1/shader/" + d.id); } catch (e) {} }
-  M.layer = null; M.fixed = null; M.lastLit = null; $("idNow").textContent = ""; renderIdentify(); refreshScene(); needDraw = true;
-}
-function litId() { let best = null, bs = 0; for (const id of M.ids) { const f = S.frame[id] || {}; let sum = 0; for (const k in f) sum += f[k]; if (sum > bs) { bs = sum; best = id; } } return best; }
-function identifyFix(id) { if (!M.layer) return; M.fixed = id; $("idNow").textContent = `now: #${id} (held)`; identifyUpload(); }
-function identifyStep(dir) { if (!M.layer) return; const cur = M.fixed !== null ? M.fixed : litId(); let i = M.ids.indexOf(cur); i = (i + dir + M.ids.length) % M.ids.length; identifyFix(M.ids[i]); }
-function identifyPause() { if (!M.layer) return; if (M.fixed !== null) { M.fixed = null; identifyUpload(); } else identifyFix(litId() || M.ids[0]); }
-function renderIdentify() {
-  const on = !!M.layer;
-  $("idStart").classList.toggle("on", on); $("idStart").textContent = on ? "Restart" : "Start";
-  $("idPause").textContent = M.fixed !== null ? "Resume" : "Pause";
-  ["idPause", "idPrev", "idNext", "idStop"].forEach((i) => { $(i).disabled = !on; });
-  $("idSpeed").value = M.period; $("idSpeedV").textContent = M.period;
-}
-$("idStart").onclick = identifyStart;
-$("idStop").onclick = identifyStop;
-$("idPause").onclick = identifyPause;
-$("idPrev").onclick = () => identifyStep(-1);
-$("idNext").onclick = () => identifyStep(1);
-$("idSpeed").addEventListener("input", () => { M.period = +$("idSpeed").value; $("idSpeedV").textContent = M.period; LS.set("idPeriod", M.period); if (M.layer) { clearTimeout(M.timer); M.timer = setTimeout(identifyUpload, 300); } });
-window.addEventListener("keydown", (ev) => {
-  if (!M.layer || /INPUT|SELECT|TEXTAREA/.test(ev.target.tagName)) return;
-  if (ev.key === "ArrowRight") { identifyStep(1); ev.preventDefault(); }
-  else if (ev.key === "ArrowLeft") { identifyStep(-1); ev.preventDefault(); }
-  else if (ev.key === " ") { identifyPause(); ev.preventDefault(); }
-});
-
 // ---------- saving into the repo (web/data/*.json via tools/serve.py) ----------
 async function saveData(name, obj) { try { const r = await fetch("data/" + name + ".json", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(obj) }); return r.ok; } catch (e) { return false; } }
 async function loadData(name) { try { const r = await fetch("data/" + name + ".json", { cache: "no-store" }); return r.ok ? await r.json() : null; } catch (e) { return null; } }
@@ -922,7 +836,7 @@ function pickFile(cb) { const f = $("filePick"); f.onchange = () => { const r = 
   $("srv").value = q.get("server") || LS.get("srv", null) || "http://arclight.local:8080";
   $("tok").value = q.get("token") || LS.get("tok", "");
   $("connect").onclick = connect;
-  resize(); renderLook(); renderPads(); renderColour(); renderIdentify(); renderSolo(); $("showOthers").classList.toggle("on", S.showOthers); document.body.classList.toggle("show-others", S.showOthers);
+  resize(); renderLook(); renderPads(); renderColour(); renderSolo(); $("showOthers").classList.toggle("on", S.showOthers); document.body.classList.toggle("show-others", S.showOthers);
   bindLearnButtons(document.querySelector("aside"));
   if ($("tok").value) connect();
 })();
