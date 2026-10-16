@@ -119,8 +119,7 @@
     </section>
     <section>
       <div class="row">
-        <button id="ownRoom" title="Mute everyone else's layers so the room shows yours">Own the room</button><button class="learn" data-learn="own">midi</button>
-        <button id="releaseRoom" title="Unmute them again">Release</button>
+        <button id="solo" title="Mute everyone else's layers so only yours show. Click again to unmute them.">Solo</button><button class="learn" data-learn="solo">midi</button>
         <button id="blackout" class="danger" title="Own the room and set every light to 0 (click twice)">Blackout</button><button class="learn" data-learn="blackout">midi</button>
         <button id="resetScene" class="danger" title="Delete every layer that isn't ours (click twice)">Reset scene</button>
       </div>
@@ -333,7 +332,6 @@ async function uploadEngine() {
 async function connect() {
   LS.set("srv", $("srv").value); LS.set("tok", $("tok").value);
   setStatus("Connecting…");
-  await resolveServer();
   // local first: the plan, the map and the last known fixture list, so the plot works with the Pi down
   S.layout = cleanLayout((await loadData("layout")) || LS.get("layout2", null) || {});
   await loadMap();
@@ -341,6 +339,7 @@ async function connect() {
   const showPlan = () => { if (!Object.keys(S.layout).length) S.layout = defaultLayout(); if (fillMissing()) saveLayout(); fitView(); updateSelInfo(); draw(); };
   const cached = await loadData("lights");            // last known fixture list: draw the plan right away
   if (cached) { setLights(cached); showPlan(); }
+  await resolveServer();
   let lights, scene, room, offline = null;
   try { [lights, scene, room] = await Promise.all([api("GET", "/v1/lights"), api("GET", "/v1/scene"), api("GET", "/v1/shader/0")]); }
   catch (e) { offline = e; }
@@ -423,6 +422,7 @@ function renderScene() {
     }
     box.appendChild(row);
   });
+  renderSolo();
   const e = S.engine && S.scene.find((d) => d.id === S.engine.id);
   $("engineInfo").textContent = !e ? "" : top && top.id !== e.id ? "engine is not on top: another layer is covering it (open layers)" : e.state !== "running" ? "engine " + e.state : "";
   $("layerCount").textContent = S.scene.length ? "(" + (S.scene.length - 1) + ")" : "";
@@ -811,7 +811,7 @@ function applyControl(target, val, trig) {
   else if (kind === "tau") setRange($("tau"), val);
   else if (kind === "look") { const names = Object.keys(LOOK_PARAMS); const n = trig && val === 1 ? names[(names.indexOf(S.look.name) + 1) % names.length] : names[Math.min(names.length - 1, Math.floor(val * names.length))]; if (n !== S.look.name) { $("look").value = n; $("look").onchange(); } }
   else if (kind === "preset") { if (trig) recallPreset(+name); }
-  else if (kind === "own") { if (trig) ownRoom(); }
+  else if (kind === "own" || kind === "solo") { if (trig) toggleSolo(); }
   else if (kind === "blackout") { if (trig) blackout(); }
 }
 $("midiEnable").onclick = enableMidi;
@@ -819,8 +819,17 @@ $("clearMidi").onclick = () => { S.midimap = {}; LS.set("midimap", {}); autosave
 
 // ---------- room buttons (two-click confirm for destructive ones) ----------
 function twoClick(el, fn) { let armed = null; el.onclick = () => { if (armed) { clearTimeout(armed); armed = null; el.classList.remove("confirm"); fn(); } else { el.classList.add("confirm"); armed = setTimeout(() => { armed = null; el.classList.remove("confirm"); }, 3000); } }; }
-$("ownRoom").onclick = ownRoom;
-$("releaseRoom").onclick = releaseRoom;
+async function toggleSolo() {
+  if (S.soloBusy) return; S.soloBusy = true; renderSolo();
+  try { if (S.mutedByUs.length) await releaseRoom(); else await ownRoom(); }
+  finally { S.soloBusy = false; renderSolo(); }
+}
+function renderSolo() {
+  const others = foreignLayers().length, held = S.mutedByUs.length > 0;
+  $("solo").classList.toggle("on", held); $("solo").disabled = S.soloBusy || (!others && !held);
+  $("solo").title = held ? "Click to unmute the other layers" : others ? `Mute the ${others} other layer(s) so only yours show` : "No other layers are running";
+}
+$("solo").onclick = toggleSolo;
 twoClick($("blackout"), blackout);
 twoClick($("resetScene"), resetScene);
 
@@ -913,7 +922,7 @@ function pickFile(cb) { const f = $("filePick"); f.onchange = () => { const r = 
   $("srv").value = q.get("server") || LS.get("srv", null) || "http://arclight.local:8080";
   $("tok").value = q.get("token") || LS.get("tok", "");
   $("connect").onclick = connect;
-  resize(); renderLook(); renderPads(); renderColour(); renderIdentify(); $("showOthers").classList.toggle("on", S.showOthers); document.body.classList.toggle("show-others", S.showOthers);
+  resize(); renderLook(); renderPads(); renderColour(); renderIdentify(); renderSolo(); $("showOthers").classList.toggle("on", S.showOthers); document.body.classList.toggle("show-others", S.showOthers);
   bindLearnButtons(document.querySelector("aside"));
   if ($("tok").value) connect();
 })();

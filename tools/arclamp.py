@@ -62,7 +62,7 @@ def arp_ip(mac="b8:27:eb:18:6a:bc"):
     """The Pi's IP from the ARP cache, for when mDNS is flaky."""
     import subprocess
     try:
-        for line in subprocess.run(["arp", "-a"], capture_output=True, text=True, timeout=5).stdout.splitlines():
+        for line in subprocess.run(["arp", "-an"], capture_output=True, text=True, timeout=5).stdout.splitlines():
             if mac in line.lower() and "(" in line:
                 return line.split("(")[1].split(")")[0]
     except Exception:

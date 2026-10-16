@@ -33,7 +33,7 @@ def resolve():
     finally:
         ex.shutdown(wait=False)
     try:
-        for line in subprocess.run(["arp", "-a"], capture_output=True, text=True, timeout=5).stdout.splitlines():
+        for line in subprocess.run(["arp", "-an"], capture_output=True, text=True, timeout=5).stdout.splitlines():
             if ARCLIGHT_MAC in line.lower() and "(" in line:
                 return {"ip": line.split("(")[1].split(")")[0], "via": "arp"}
     except Exception:

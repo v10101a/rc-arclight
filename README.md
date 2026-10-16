@@ -48,8 +48,8 @@ context, and `localhost` counts.
 How it drives the lights, in one breath: colour controls write **targets** into the roomtone
 (fast, ~85 ms); one generated **engine layer** on the Pi eases every light toward its target and
 multiplies in a **look** (breathe, chase, wave, sparkle, strobe) with a crossfade when the look
-changes; "own the room" mutes everyone else's layers so the targets are what you see. Design and
-reasons in `docs/controller-design.md`.
+changes; "Solo" mutes everyone else's layers so the targets are what you see, and clicking it
+again gives the room back.
 
 ## The one-paragraph model
 
