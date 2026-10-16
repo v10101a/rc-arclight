@@ -5,138 +5,152 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>arclight</title>
 <style>
-  :root { --bg:#111317; --panel:#181b21; --line:#2a2f3a; --fg:#d9dee6; --mut:#8a93a3; --acc:#6aa2ff; --warn:#ffd166; --bad:#ff8a80; --ok:#8ce99a; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font: 13px/1.4 ui-monospace, Menlo, monospace; }
-  header { display:flex; gap:10px; align-items:center; padding:8px 12px; border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap; }
-  header h1 { font-size:15px; margin:0 6px 0 0; }
-  .health { display:flex; gap:14px; margin-left:auto; color:var(--mut); flex-wrap:wrap; }
-  .health b { color:var(--fg); font-weight:600; font-variant-numeric: tabular-nums; }
-  main { display:grid; grid-template-columns: 1fr 360px; height: calc(100vh - 45px); }
-  #plan { padding:8px 10px; min-width:0; min-height:0; display:flex; flex-direction:column; }
-  #plan > .row, #plan > .hint { flex:none; }
-  canvas { display:block; width:100%; flex:1; min-height:300px; border:1px solid var(--line); border-radius:6px; background:#0d0f13; cursor:crosshair; touch-action:none; }
+  :root {
+    --wall:#ECE9F1; --panel:#F7F5FA; --panel-2:#FFFFFF; --line:#DAD5E3; --ink:#2B2735; --muted:#857F93;
+    --accent:#D64A6E; --accent-ink:#FFFFFF; --stage:#191722; --bulb:#F5C542; --bad:#C8384F; --ok:#2E9E6B;
+    --sans: ui-rounded, "SF Pro Rounded", "Nunito", "Varela Round", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  body { margin:0; background:var(--wall); color:var(--ink); font:13px/1.45 var(--sans); }
+  header { display:flex; gap:10px; align-items:center; padding:10px 16px; }
+  header h1 { font-size:17px; font-weight:800; margin:0 8px 0 0; letter-spacing:-.01em; display:flex; align-items:center; gap:7px; }
+  header h1 svg { width:18px; height:18px; }
+  header input { width:auto; }
+  #srv { width:190px; } #tok { width:120px; }
+  .health { display:flex; gap:16px; margin-left:auto; color:var(--muted); font-size:12px; align-items:center; }
+  .health b { color:var(--ink); font-weight:700; font-family:var(--mono); font-variant-numeric:tabular-nums; }
+  main { display:grid; grid-template-columns:1fr 330px; gap:14px; padding:0 16px 14px; height:calc(100vh - 54px); }
+  #plan { min-width:0; min-height:0; display:flex; flex-direction:column; gap:8px; }
+  #plan > .row { flex:none; }
+  canvas { display:block; width:100%; flex:1; min-height:300px; border-radius:18px; background:var(--stage); cursor:crosshair; touch-action:none; box-shadow:inset 0 0 0 1px rgba(255,255,255,.04); }
   canvas.edit { cursor:move; }
-  aside { border-left:1px solid var(--line); background:var(--panel); padding:10px; overflow-y:auto; }
-  section { margin-bottom:16px; }
-  h2 { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin:0 0 6px; }
-  h2 .hint { text-transform:none; letter-spacing:0; }
-  button { background:#252a34; color:var(--fg); border:1px solid #39404e; border-radius:4px; padding:4px 9px; cursor:pointer; font:inherit; }
-  button:hover { background:#303747; }
-  button.on { border-color:var(--acc); color:var(--acc); }
-  button.danger { border-color:#5a2a2a; color:var(--bad); }
-  button.confirm { background:#4a1f1f; border-color:var(--bad); }
-  input[type=text], input[type=password], select { background:#0f1115; color:var(--fg); border:1px solid #2c313b; border-radius:4px; padding:4px 6px; font:inherit; }
+  aside { background:var(--panel); border-radius:18px; padding:14px 16px; overflow-y:auto; min-height:0; }
+  section { margin-bottom:18px; }
+  section:last-child { margin-bottom:0; }
+  h2 { font-size:13px; font-weight:700; margin:0 0 8px; color:var(--ink); display:flex; align-items:baseline; gap:8px; }
+  h2 .hint { font-weight:500; }
+  button { background:var(--panel-2); color:var(--ink); border:1px solid var(--line); border-radius:999px; padding:4px 11px; cursor:pointer; font:inherit; font-weight:600; line-height:1.3; }
+  button:hover { border-color:#BDB6CA; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  button.on { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  button.danger { color:var(--bad); border-color:#EBC3CB; }
+  button.confirm { background:var(--bad); border-color:var(--bad); color:#fff; }
+  button:disabled { opacity:.45; cursor:default; }
+  input[type=text], input[type=password], select { background:var(--panel-2); color:var(--ink); border:1px solid var(--line); border-radius:10px; padding:4px 8px; font:inherit; }
   .row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:4px 0; }
-  .slider { display:grid; grid-template-columns: 62px 1fr 40px 34px; gap:6px; align-items:center; margin:3px 0; }
-  .slider label { color:var(--mut); }
-  .slider input[type=range] { width:100%; accent-color:var(--acc); margin:0; }
-  .slider .v { text-align:right; color:var(--warn); font-variant-numeric: tabular-nums; }
-  .learn { font-size:10px; padding:1px 4px; color:var(--mut); border-color:#2c313b; }
-  .learn.armed { color:var(--warn); border-color:var(--warn); }
-  .learn.bound { color:var(--acc); border-color:#2c4a7a; }
-  .pads { display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; }
-  .chips { display:flex; flex-wrap:wrap; gap:4px; }
-  .chip { padding:2px 8px; font-size:11px; border-radius:10px; }
-  .chip i { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; vertical-align:0; }
-  .learn-like { font-size:10px; padding:1px 5px; color:var(--mut); border-color:#2c313b; text-transform:none; letter-spacing:0; }
-  .learn-like.on { color:var(--acc); border-color:var(--acc); }
-  .pads button { padding:10px 4px; }
-  .pads button.full { border-color:var(--acc); }
+  .slider { display:grid; grid-template-columns:64px 1fr 42px 34px; gap:8px; align-items:center; margin:4px 0; }
+  .slider label { color:var(--muted); }
+  .slider input[type=range] { width:100%; accent-color:var(--accent); margin:0; }
+  .slider .v { text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums; color:var(--ink); }
+  .learn { font-size:10px; padding:1px 6px; color:var(--muted); font-weight:600; }
+  .learn.armed { color:var(--accent); border-color:var(--accent); }
+  .learn.bound { color:var(--accent-ink); background:var(--accent); border-color:var(--accent); }
+  .pads { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  .pads button { padding:10px 4px; border-radius:12px; }
+  .pads button.full { border-color:var(--accent); color:var(--accent); }
+  .areas { display:flex; flex-direction:column; gap:5px; }
+  .area { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .area .name { background:none; border:none; padding:2px 4px 2px 0; color:var(--muted); font-weight:600; min-width:96px; text-align:left; }
+  .area .name:hover { color:var(--ink); }
+  .area .g { padding:1px 9px; font-size:12px; }
   .layers { font-size:12px; }
-  .layers > div { display:flex; gap:6px; align-items:center; padding:3px 0; border-bottom:1px solid #1f242d; }
-  .layers .n { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--mut); }
+  .layers > div { display:flex; gap:6px; align-items:center; padding:4px 0; border-bottom:1px solid var(--line); }
+  .layers .n { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); }
   .layers .muted .n { opacity:.45; text-decoration:line-through; }
-  .layers button { padding:1px 6px; font-size:11px; }
-  .hint { color:var(--mut); font-size:11px; }
+  .layers button { padding:1px 8px; font-size:11px; }
+  .hint { color:var(--muted); font-size:12px; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:#A1660E; }
   .learn, .midi-only, .others, #relayRow, .edit-only { display:none; }
-  body.editing .edit-only { display:inline; }
   body.midi-on .learn { display:inline-block; } body.midi-on .midi-only { display:block; }
   body.show-others .others { display:inline-block; } body.relays-selected #relayRow { display:flex; }
-  details.fold summary { cursor:pointer; list-style:none; } details.fold summary::-webkit-details-marker { display:none; }
-  details.fold summary::before { content:"▸ "; color:var(--mut); } details.fold[open] summary::before { content:"▾ "; }
-  .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:var(--warn); }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; height:auto; } #plan canvas { height:70vh; flex:none; } aside { border-left:none; border-top:1px solid var(--line); } }
+  body.editing .edit-only { display:inline; }
+  details.fold summary { cursor:pointer; list-style:none; color:var(--muted); font-weight:600; }
+  details.fold summary::-webkit-details-marker { display:none; }
+  details.fold summary::before { content:"▸ "; } details.fold[open] summary::before { content:"▾ "; }
+  @media (prefers-reduced-motion: no-preference) { button, .learn { transition:background-color .12s, border-color .12s, color .12s; } }
+  @media (max-width: 900px) { main { grid-template-columns:1fr; height:auto; } #plan canvas { height:70vh; flex:none; } }
 </style>
 </head>
 <body>
 <header>
-  <h1>arclight</h1>
-  <input id="srv" type="text" size="24" title="API server">
-  <input id="tok" type="password" size="16" placeholder="token" title="API token: the Token field on debug.html">
-  <button id="connect">connect</button>
-  <span id="status" class="hint">not connected</span>
+  <h1><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.5a6 6 0 0 0-3.6 10.8c.6.5.9 1.1 1 1.9h5.2c.1-.8.4-1.4 1-1.9A6 6 0 0 0 10 1.5Z" fill="#F5C542"/><rect x="7.2" y="15.2" width="5.6" height="1.6" rx=".8" fill="#2B2735"/><rect x="7.8" y="17.4" width="4.4" height="1.4" rx=".7" fill="#2B2735"/></svg>arclight</h1>
+  <input id="srv" type="text" title="API server">
+  <input id="tok" type="password" placeholder="token" title="API token: the Token field on debug.html">
+  <button id="connect">Connect</button>
+  <span id="status" class="hint">Not connected</span>
   <div class="health">
     <span><b id="hFps">–</b> fps</span>
-    <span>write <b id="hLat">–</b> ms</span>
-    <span>layers <b id="hLayers">–</b></span>
+    <span><b id="hLat">–</b> ms</span>
+    <span><b id="hLayers">–</b> layers</span>
     <span>engine <b id="hEngine">none</b></span>
-    <button id="saveAll" title="save layout, presets and midi map into web/data/ (also happens automatically)">save</button>
+    <button id="saveAll" title="Save layout, presets and MIDI map into web/data (also happens automatically)">Save</button>
   </div>
 </header>
 <main>
   <div id="plan">
     <div class="row">
-      <button id="selAll">all</button><button id="selNone">none</button><button id="selInv">invert</button>
-      <button id="sel4x1" class="others">4x1</button><button id="selRelays" class="others">relays</button>
+      <button id="selAll">All</button><button id="selNone">None</button><button id="selInv">Invert</button>
+      <button id="sel4x1" class="others">4x1</button><button id="selRelays" class="others">Relays</button>
       <span class="hint" id="selInfo"></span>
       <span style="flex:1"></span>
-      <button id="fitView" title="fit the floor plan (scroll = pan, pinch or ctrl+scroll = zoom)">fit</button>
-      <button id="showOthers" title="also plot the 4x1s and relays">56–115</button>
-      <span id="editTools" class="edit-only"><button id="alignY" title="put the selected dots on one row">align ─</button><button id="alignX" title="put the selected dots in one column">align │</button><button id="spreadX" title="space the selected dots evenly left to right">spread ↔</button><button id="spreadY" title="space the selected dots evenly top to bottom">spread ↕</button><button id="tidy" title="snap dots that are nearly on the same row or column onto it (all plotted dots, or the selection)">tidy</button><button id="layoutUndoBtn" title="undo the last layout operation">undo</button></span>
-      <button id="editLayout">edit layout</button>
-      <button id="layoutMore" title="export / import / default layout">⋯</button>
-      <span id="layoutMenu" hidden><button id="exportLayout">export</button><button id="importLayout">import</button><button id="defaultLayout">default</button></span>
+      <span id="editTools" class="edit-only"><button id="alignY" title="Put the selected dots on one row">Align row</button><button id="alignX" title="Put the selected dots in one column">Align column</button><button id="spreadX" title="Space the selected dots evenly left to right">Spread across</button><button id="spreadY" title="Space the selected dots evenly top to bottom">Spread down</button><button id="tidy" title="Snap dots that are nearly on the same row or column onto it">Tidy</button><button id="layoutUndoBtn" title="Undo the last layout change">Undo</button></span>
+      <button id="fitView" title="Fit the floor plan. Scroll pans, pinch or ctrl+scroll zooms.">Fit</button>
+      <button id="showOthers" title="Also plot the 4x1s and relays">56–115</button>
+      <button id="editLayout">Edit layout</button>
+      <button id="layoutMore" title="Export or import the layout">⋯</button>
+      <span id="layoutMenu" hidden><button id="exportLayout">Export</button><button id="importLayout">Import</button></span>
     </div>
     <canvas id="cv"></canvas>
     <div class="row" id="mapBar">
-      <span class="hint" title="lights one light at a time so you can see which dot is which">identify</span>
-      <button id="idStart">start</button><button id="idPause" disabled>pause</button><button id="idPrev" disabled title="← key">◀</button><button id="idNext" disabled title="→ key">▶</button><button id="idStop" class="danger" disabled>stop</button>
-      <input type="range" id="idSpeed" min="100" max="3000" step="50" style="width:110px;accent-color:var(--acc)" title="ms per light"><span id="idSpeedV" class="warn"></span>
+      <span class="hint" title="Lights one light at a time so you can see which dot is which">Identify</span>
+      <button id="idStart">Start</button><button id="idPause" disabled>Pause</button><button id="idPrev" disabled title="← key">◀</button><button id="idNext" disabled title="→ key">▶</button><button id="idStop" class="danger" disabled>Stop</button>
+      <input type="range" id="idSpeed" min="100" max="3000" step="50" style="width:110px;accent-color:var(--accent)" title="ms per light"><span id="idSpeedV" class="hint"></span>
       <span id="idNow" class="warn"></span>
       <span style="flex:1"></span>
-      <span class="hint">click select · shift add · drag box · edit layout: drag dots</span>
+      <span class="hint">Click selects, shift adds, drag draws a box.</span>
     </div>
   </div>
   <aside>
     <section>
-      <h2>groups <span class="hint">click selects · shift adds</span> <button id="groupLines" class="learn-like" title="draw the row lines">lines</button></h2>
-      <div class="chips" id="groupChips"></div>
+      <h2>Groups <span class="hint">click to toggle</span></h2>
+      <div class="areas" id="groupChips"></div>
     </section>
     <section>
       <div class="row">
-        <button id="ownRoom" title="mute everyone else's layers so the room shows yours">own room</button><button class="learn" data-learn="own">midi</button>
-        <button id="releaseRoom" title="unmute them again">release</button>
-        <button id="blackout" class="danger" title="own the room and set every light to 0 (click twice)">blackout</button><button class="learn" data-learn="blackout">midi</button>
-        <button id="resetScene" class="danger" title="delete every layer that isn't ours (click twice)">reset</button>
+        <button id="ownRoom" title="Mute everyone else's layers so the room shows yours">Own the room</button><button class="learn" data-learn="own">midi</button>
+        <button id="releaseRoom" title="Unmute them again">Release</button>
+        <button id="blackout" class="danger" title="Own the room and set every light to 0 (click twice)">Blackout</button><button class="learn" data-learn="blackout">midi</button>
+        <button id="resetScene" class="danger" title="Delete every layer that isn't ours (click twice)">Reset scene</button>
       </div>
     </section>
     <section>
-      <h2>colour <span class="hint" id="colInfo"></span></h2>
+      <h2>Colour <span class="hint" id="colInfo"></span></h2>
       <div id="colour"></div>
-      <div class="row" id="relayRow"><button id="relayOn">relays on</button><button id="relayOff">relays off</button></div>
+      <div class="row" id="relayRow"><button id="relayOn">Relays on</button><button id="relayOff">Relays off</button></div>
     </section>
     <section>
-      <h2>look</h2>
-      <div class="row"><select id="look"></select><select id="order" title="direction of chase / wave, from the mapped positions"></select><button class="learn" data-learn="look">midi</button><button id="applyLook" title="run the look on the selected lights">to selection</button><button id="lookAll">all bulbs</button></div>
+      <h2>Look</h2>
+      <div class="row"><select id="look"></select><select id="order" title="Direction of chase and wave, from the mapped positions"></select><button class="learn" data-learn="look">midi</button><button id="applyLook" title="Run the look on the selected lights">On selection</button><button id="lookAll">All bulbs</button></div>
       <div id="params"></div>
-      <details class="fold"><summary class="hint">timing</summary>
+      <details class="fold"><summary>Timing</summary>
         <div class="slider"><label>fade</label><input type="range" id="fade" min="0" max="4000" step="50"><span class="v" id="fadeV"></span><button class="learn" data-learn="fade">midi</button></div>
         <div class="slider"><label>smooth</label><input type="range" id="tau" min="0" max="2000" step="10"><span class="v" id="tauV"></span><button class="learn" data-learn="tau">midi</button></div>
       </details>
       <div class="hint bad" id="engineInfo"></div>
     </section>
     <section>
-      <h2>presets <span class="hint">shift+click saves · alt+click clears</span></h2>
+      <h2>Presets <span class="hint">shift+click saves, alt+click clears</span></h2>
       <div class="pads" id="pads"></div>
     </section>
     <section>
-      <h2>midi</h2>
-      <div class="row"><button id="midiEnable">enable</button><span class="hint" id="midiInfo"></span><button id="clearMidi" class="learn">clear map</button></div>
-      <div class="hint midi-only">click a <b>midi</b> button, then move a knob or hit a pad · last: <span id="midiLast">–</span></div>
+      <h2>MIDI</h2>
+      <div class="row"><button id="midiEnable">Enable</button><span class="hint" id="midiInfo"></span><button id="clearMidi" class="learn">clear map</button></div>
+      <div class="hint midi-only">Click a <b>midi</b> button, then move a knob or hit a pad. Last: <span id="midiLast">–</span></div>
     </section>
     <section>
-      <details class="fold"><summary class="hint">layers <span id="layerCount"></span></summary><div class="layers" id="layers"></div></details>
+      <details class="fold"><summary>Layers <span id="layerCount"></span></summary><div class="layers" id="layers"></div></details>
     </section>
   </aside>
 </main>
@@ -210,7 +224,7 @@ const S = {
   presets: LS.get("presets", null) || new Array(8).fill(null),
   midimap: LS.get("midimap", {}), learn: null, mutedByUs: LS.get("mutedByUs", []),
   intensity: 1, showOthers: LS.get("showOthers", false),
-  map: { groups: [], unnumbered: [] }, groupOf: {}, showGroups: LS.get("showGroups", true),
+  map: { groups: [], unnumbered: [] }, groupOf: {},
 };
 function plotted() { return S.showOthers ? S.ids : S.ids.filter((id) => S.lights[id].type === "br30"); }
 
@@ -225,10 +239,15 @@ async function resolveServer() {
   S.base = typed; S.via = null;
 }
 async function api(method, path, body) {
-  const r = await fetch(base() + path, {
-    method, headers: { Authorization: "Bearer " + $("tok").value, "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 8000);
+  let r;
+  try {
+    r = await fetch(base() + path, {
+      method, headers: { Authorization: "Bearer " + $("tok").value, "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body), signal: ctl.signal,
+    });
+  } catch (e) { throw new Error(e.name === "AbortError" ? "no answer in 8 s" : e.message); }
+  finally { clearTimeout(timer); }
   if (r.status >= 400) { let m = "HTTP " + r.status; try { m = (await r.json()).error || m; } catch (e) {} throw new Error(m); }
   return r.status === 204 ? null : r.json();
 }
@@ -313,18 +332,19 @@ async function uploadEngine() {
 // ---------- connect ----------
 async function connect() {
   LS.set("srv", $("srv").value); LS.set("tok", $("tok").value);
-  setStatus("connecting…");
+  setStatus("Connecting…");
   await resolveServer();
   // local first: the plan, the map and the last known fixture list, so the plot works with the Pi down
-  S.layout = cleanLayout(LS.get("layout2", null) || (await loadData("layout")) || {});
+  S.layout = cleanLayout((await loadData("layout")) || LS.get("layout2", null) || {});
   await loadMap();
+  const setLights = (inv) => { S.lights = {}; (inv.lights || []).forEach((l) => { S.lights[l.id] = l; }); S.ids = Object.keys(S.lights).map(Number).sort((a, b) => a - b); };
+  const showPlan = () => { if (!Object.keys(S.layout).length) S.layout = defaultLayout(); if (fillMissing()) saveLayout(); fitView(); updateSelInfo(); draw(); };
+  const cached = await loadData("lights");            // last known fixture list: draw the plan right away
+  if (cached) { setLights(cached); showPlan(); }
   let lights, scene, room, offline = null;
   try { [lights, scene, room] = await Promise.all([api("GET", "/v1/lights"), api("GET", "/v1/scene"), api("GET", "/v1/shader/0")]); }
-  catch (e) { offline = e; lights = await loadData("lights"); }
-  if (lights) { S.lights = {}; (lights.lights || []).forEach((l) => { S.lights[l.id] = l; }); S.ids = Object.keys(S.lights).map(Number).sort((a, b) => a - b); }
-  if (!Object.keys(S.layout).length) S.layout = defaultLayout();
-  if (fillMissing()) saveLayout();
-  fitView(); updateSelInfo(); draw();
+  catch (e) { offline = e; }
+  if (lights) { setLights(lights); showPlan(); }
   if (offline) { setStatus("Pi unreachable (" + offline.message + "): layout only, no live colours. Is arclight.local on this network?", "bad"); return; }
   try {
     S.targets = {}; const tl = (room.template && room.template.lights) || {};
@@ -343,7 +363,7 @@ async function connect() {
     if (idl.length) { M.layer = idl[0]; const m = idl[0].script.match(/^var IDS = (\[.*?\]), PERIOD = (\d+), FIXED = (null|\d+);$/m); if (m) { M.ids = JSON.parse(m[1]); M.period = +m[2]; M.fixed = m[3] === "null" ? null : +m[3]; } }
     renderIdentify();
     openStream(); renderScene(); renderColour(); updateSelInfo(); draw();
-    setStatus("connected " + (S.via ? "via " + S.base.replace(/^https?:\/\//, "") + " " : "") + new Date().toLocaleTimeString(), "ok");
+    setStatus("Connected" + (S.via ? " via " + S.base.replace(/^https?:\/\//, "") : "") + " at " + new Date().toLocaleTimeString(), "ok");
   } catch (e) { setStatus(e.message + (S.via ? "" : " (is arclight.local resolving? try its IP in the server box)"), "bad"); }
 }
 function openStream() {
@@ -446,17 +466,32 @@ async function loadMap() {
   S.groupOf = {}; S.map.groups.forEach((g) => { g.ids.forEach((id) => { S.groupOf[id] = g; }); });
   renderGroups();
 }
+// "Kitchen 2" -> area Kitchen, sub 2; "Row 14C" -> area Row 14, sub C; anything else is its own area
+function areaOf(name) { let m = name.match(/^(.*?\d+)([A-Z])$/); if (m) return [m[1], m[2]]; m = name.match(/^(.*\S)\s+(\d+)$/); if (m) return [m[1], m[2]]; return [name, ""]; }
+function groupSelected(g) { return g.ids.length > 0 && g.ids.every((id) => S.selection.has(id)); }
+function toggleGroups(groups) {
+  const allOn = groups.every(groupSelected);
+  groups.forEach((g) => g.ids.forEach((id) => { if (allOn) S.selection.delete(id); else S.selection.add(id); }));
+  updateSelInfo(); needDraw = true;
+}
 function renderGroups() {
   const box = $("groupChips"); box.innerHTML = "";
-  S.map.groups.filter((g) => g.ids.length).forEach((g) => {
-    const b = document.createElement("button"); b.className = "chip" + (g.ids.every((id) => S.selection.has(id)) ? " on" : "");
-    b.innerHTML = `<i style="background:${g.color}"></i>${esc(g.name)}`; b.title = g.ids.join(", ");
-    b.onclick = (ev) => { if (!ev.shiftKey) S.selection.clear(); g.ids.forEach((id) => S.selection.add(id)); updateSelInfo(); needDraw = true; };
-    box.appendChild(b);
-  });
-  $("groupLines").classList.toggle("on", S.showGroups);
+  const groups = S.map.groups.filter((g) => g.ids.length), cand = groups.map((g) => areaOf(g.name));
+  const count = {}; cand.forEach(([a]) => { count[a] = (count[a] || 0) + 1; });
+  const areas = new Map();
+  groups.forEach((g, i) => { const [area, sub] = count[cand[i][0]] > 1 ? cand[i] : [g.name, ""]; if (!areas.has(area)) areas.set(area, []); areas.get(area).push({ g, sub }); });
+  for (const [area, items] of areas) {
+    const row = document.createElement("div"); row.className = "area";
+    const name = document.createElement("button"); name.className = "name"; name.textContent = area; name.title = "Toggle the whole area";
+    name.onclick = () => toggleGroups(items.map((it) => it.g)); row.appendChild(name);
+    items.forEach(({ g, sub }) => {
+      const b = document.createElement("button"); b.className = "g" + (groupSelected(g) ? " on" : "");
+      b.textContent = sub || "all"; b.title = g.name + ": " + g.ids.join(", ");
+      b.onclick = () => toggleGroups([g]); row.appendChild(b);
+    });
+    box.appendChild(row);
+  }
 }
-$("groupLines").onclick = () => { S.showGroups = !S.showGroups; LS.set("showGroups", S.showGroups); renderGroups(); needDraw = true; };
 $("fitView").onclick = fitView;
 function resize() {
   const w = cv.clientWidth || 800, h = cv.clientHeight || 520, W = Math.round(w * devicePixelRatio), H = Math.round(h * devicePixelRatio);
@@ -490,25 +525,31 @@ function pos(id) { return toPx(S.layout[id] || { x: 500, y: 870 }); }
 function radius(id) { const dpr = devicePixelRatio, base = S.lights[id] && S.lights[id].type === "relay" ? 8 : 13; return Math.max(5 * dpr, Math.min(18 * dpr, base * sx())); }
 function drawFloor() {
   const s = sx(), dpr = devicePixelRatio;
-  ctx.fillStyle = "#0d0f13"; ctx.fillRect(0, 0, cv.width, cv.height);
-  for (const r of FP.ROOMS) { const [x, y] = toPx(r); ctx.fillStyle = r.kind === "core" ? "#1d2029" : "#151821"; ctx.fillRect(x, y, r.w * s, r.h * s); ctx.strokeStyle = "#363b49"; ctx.lineWidth = dpr; ctx.strokeRect(x, y, r.w * s, r.h * s); }
+  ctx.fillStyle = "#191722"; ctx.fillRect(0, 0, cv.width, cv.height);
+  for (const r of FP.ROOMS) { const [x, y] = toPx(r); ctx.fillStyle = r.kind === "core" ? "#242131" : "#1F1C2A"; ctx.fillRect(x, y, r.w * s, r.h * s); ctx.strokeStyle = "#39354A"; ctx.lineWidth = dpr; ctx.strokeRect(x, y, r.w * s, r.h * s); }
   const [ox, oy] = toPx({ x: 0, y: 0 }), W = FP.WIDTH * s, H = FP.HEIGHT * s;
   ctx.strokeStyle = "#7d8396"; ctx.lineWidth = Math.max(1.5 * dpr, 3 * s); ctx.strokeRect(ox, oy, W, H);
   ctx.strokeStyle = "#3f7fc2"; ctx.setLineDash([10 * s, 6 * s]); ctx.beginPath(); ctx.moveTo(ox, oy + H); ctx.lineTo(ox + W, oy + H); ctx.moveTo(ox, oy); ctx.lineTo(ox, oy + H); ctx.stroke(); ctx.setLineDash([]);
   ctx.fillStyle = "#4f5569"; for (const c of FP.COLUMNS) { const [x, y] = toPx(c); const h = FP.COLUMN_SIZE * s / 2; ctx.fillRect(x - h, y - h, 2 * h, 2 * h); }
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-  ctx.font = `600 ${11 * dpr}px ui-monospace, Menlo, monospace`; ctx.fillStyle = "#6b7285";
+  ctx.font = `700 ${11 * dpr}px ui-rounded, system-ui, sans-serif`; ctx.fillStyle = "#6E6885";
   for (const r of FP.ROOMS) { if (!r.name) continue; const [x, y] = toPx({ x: r.x + r.w / 2, y: r.y + 16 }); ctx.fillText(r.name, x, y); }
-  ctx.font = `italic 600 ${12 * dpr}px ui-monospace, Menlo, monospace`; ctx.fillStyle = "#4a5063";
+  ctx.font = `italic 700 ${12 * dpr}px ui-rounded, system-ui, sans-serif`; ctx.fillStyle = "#4F4A63";
   for (const a of FP.AREAS) { const [x, y] = toPx(a); ctx.fillText(a.name, x, y); }
   ctx.setLineDash([4 * dpr, 3 * dpr]); ctx.lineWidth = 1.5 * dpr;
   for (const u of S.map.unnumbered || []) { const g = S.map.groups.find((gg) => gg.name === u.group); const [x, y] = toPx(u); ctx.beginPath(); ctx.arc(x, y, Math.max(4 * dpr, 10 * s), 0, Math.PI * 2); ctx.strokeStyle = g ? g.color : "#555"; ctx.stroke(); }
   ctx.setLineDash([]);
-  if (S.showGroups) for (const g of S.map.groups) {
-    if (g.ids.length < 2) continue;
-    ctx.strokeStyle = g.color; ctx.globalAlpha = 0.35; ctx.lineWidth = Math.max(1.5 * dpr, 3 * s); ctx.lineJoin = "round"; ctx.beginPath();
+  for (const g of S.map.groups) {
+    if (g.ids.length < 2 || !groupSelected(g)) continue;
+    ctx.strokeStyle = g.color; ctx.globalAlpha = 0.45; ctx.lineWidth = Math.max(1.5 * dpr, 3 * s); ctx.lineJoin = "round"; ctx.beginPath();
     g.ids.forEach((id, i) => { const [x, y] = pos(id); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke(); ctx.globalAlpha = 1;
   }
+}
+// what colour a dot shows: the live frame if the stream is up, else the last known target, dimmed, else off
+function dotRGB(id) {
+  if (S.ws && S.ws.readyState === 1 && S.frame[id]) return [lightRGB(S.frame[id]), true];
+  if (S.targets[id]) { const c = lightRGB(S.targets[id]); return [[c[0] * 0.45 | 0, c[1] * 0.45 | 0, c[2] * 0.45 | 0], false]; }
+  return [[42, 39, 51], false];
 }
 function draw() {
   needDraw = false;
@@ -517,19 +558,22 @@ function draw() {
   ctx.textAlign = "center";
   for (const id of plotted()) {
     const [x, y] = pos(id), r = radius(id), g = S.groupOf[id];
-    const rgb = lightRGB(S.frame[id] || {});
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`; ctx.fill();
-    ctx.lineWidth = 2 * dpr; ctx.strokeStyle = g ? g.color : "#3a3f4d"; ctx.stroke();
+    const [rgb, live] = dotRGB(id), lum = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
+    const fill = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    if (live && lum > 40) { ctx.shadowColor = fill; ctx.shadowBlur = r * 1.3; }
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = fill; ctx.fill();
+    ctx.shadowBlur = 0; ctx.shadowColor = "transparent";
+    const gOn = g && groupSelected(g);
+    ctx.lineWidth = (gOn ? 2.5 : 1.5) * dpr; ctx.strokeStyle = gOn ? g.color : "rgba(255,255,255,.14)"; ctx.stroke();
     if (S.selection.has(id)) { ctx.beginPath(); ctx.arc(x, y, r + 3.5 * dpr, 0, Math.PI * 2); ctx.lineWidth = 2.5 * dpr; ctx.strokeStyle = "#ffffff"; ctx.stroke(); }
     if (r >= 8 * dpr) {
-      const lum = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
-      ctx.font = `800 ${Math.round(r * 0.95)}px ui-monospace, Menlo, monospace`; ctx.textBaseline = "middle";
-      ctx.fillStyle = lum > 120 ? "#111" : "#e8e8e8"; ctx.fillText(id, x, y + 0.5 * dpr); ctx.textBaseline = "alphabetic";
-    } else if (S.editLayout || M.layer || S.selection.has(id)) { ctx.font = `${9 * dpr}px ui-monospace, Menlo, monospace`; ctx.fillStyle = "#8a93a3"; ctx.fillText(id, x, y + r + 10 * dpr); }
+      ctx.font = `800 ${Math.round(r * 0.95)}px ${"ui-rounded, system-ui, sans-serif"}`; ctx.textBaseline = "middle";
+      ctx.fillStyle = lum > 120 ? "rgba(20,18,26,.9)" : "rgba(240,238,245,.9)"; ctx.fillText(id, x, y + 0.5 * dpr); ctx.textBaseline = "alphabetic";
+    } else if (S.editLayout || M.layer || S.selection.has(id)) { ctx.font = `${9 * dpr}px ui-rounded, system-ui, sans-serif`; ctx.fillStyle = "#8a93a3"; ctx.fillText(id, x, y + r + 10 * dpr); }
   }
   if (M.layer) {
     const lit = M.fixed !== null ? M.fixed : litId();
-    if (lit !== null) { const [x, y] = pos(lit); ctx.beginPath(); ctx.arc(x, y, radius(lit) + 7 * dpr, 0, Math.PI * 2); ctx.lineWidth = 2 * dpr; ctx.strokeStyle = "#ffd166"; ctx.stroke(); }
+    if (lit !== null) { const [x, y] = pos(lit); ctx.beginPath(); ctx.arc(x, y, radius(lit) + 7 * dpr, 0, Math.PI * 2); ctx.lineWidth = 2 * dpr; ctx.strokeStyle = "#F5C542"; ctx.stroke(); }
     if (lit !== M.lastLit) { M.lastLit = lit; $("idNow").textContent = lit !== null ? `now: #${lit}${M.fixed !== null ? " (held)" : ""}` : ""; }
   }
   if (drag && drag.box) { ctx.strokeStyle = "#6aa2ff"; ctx.lineWidth = 1 * dpr; ctx.setLineDash([4 * dpr, 3 * dpr]); ctx.strokeRect(drag.x0, drag.y0, drag.x1 - drag.x0, drag.y1 - drag.y0); ctx.setLineDash([]); }
@@ -618,7 +662,6 @@ $("selInv").onclick = () => { const old = S.selection, p = new Set(plotted()); s
 $("showOthers").onclick = () => { S.showOthers = !S.showOthers; LS.set("showOthers", S.showOthers); $("showOthers").classList.toggle("on", S.showOthers); document.body.classList.toggle("show-others", S.showOthers); needDraw = true; };
 $("layoutMore").onclick = () => { $("layoutMenu").hidden = !$("layoutMenu").hidden; };
 $("editLayout").onclick = () => { S.editLayout = !S.editLayout; $("editLayout").classList.toggle("on", S.editLayout); cv.classList.toggle("edit", S.editLayout); document.body.classList.toggle("editing", S.editLayout); needDraw = true; };
-$("defaultLayout").onclick = () => { S.layout = defaultLayout(); saveLayout(); autosave(); fitView(); };
 $("exportLayout").onclick = () => download("arclight-layout.json", Object.assign({ _frame: FP.ID }, S.layout));
 $("importLayout").onclick = () => pickFile((o) => { S.layout = cleanLayout(o); fillMissing(); saveLayout(); autosave(); fitView(); });
 function updateSelInfo() {
@@ -829,8 +872,8 @@ function identifyStep(dir) { if (!M.layer) return; const cur = M.fixed !== null 
 function identifyPause() { if (!M.layer) return; if (M.fixed !== null) { M.fixed = null; identifyUpload(); } else identifyFix(litId() || M.ids[0]); }
 function renderIdentify() {
   const on = !!M.layer;
-  $("idStart").classList.toggle("on", on); $("idStart").textContent = on ? "restart sequence" : "start sequence";
-  $("idPause").textContent = M.fixed !== null ? "resume" : "pause";
+  $("idStart").classList.toggle("on", on); $("idStart").textContent = on ? "Restart" : "Start";
+  $("idPause").textContent = M.fixed !== null ? "Resume" : "Pause";
   ["idPause", "idPrev", "idNext", "idStop"].forEach((i) => { $(i).disabled = !on; });
   $("idSpeed").value = M.period; $("idSpeedV").textContent = M.period;
 }
